@@ -1,15 +1,12 @@
-// src/services/authService.js
-
-import { users, nextUserId } from './mockDatabase';
+import db from './mockDatabase';
 
 const getUserByEmail = (email) => {
-  return users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+  return db.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
 };
 
 export const login = (email, password) => {
   const user = getUserByEmail(email);
   if (user && user.password === password) {
-    // In a real app, you wouldn't send the password back.
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
@@ -22,14 +19,21 @@ export const register = (email, password) => {
   }
 
   const newUser = {
-    id: nextUserId++,
+    id: db.nextUserId++,
     email,
     password,
-    role: 'customer', // All new registrations are customers by default
+    role: 'customer',
     isAdmin: false,
   };
-  users.push(newUser);
+  db.users.push(newUser);
 
   const { password: _, ...userWithoutPassword } = newUser;
   return userWithoutPassword;
+};
+
+export const getAllUsers = () => {
+    return db.users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+    });
 };

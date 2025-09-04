@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../services/authService'; // Updated import
+import { register } from '../services/authService';
 import {
   Container,
   Paper,
@@ -12,7 +12,7 @@ import {
   Alert
 } from '@mui/material';
 
-const RegisterPage = ({ onLogin }) => {
+const RegisterPage = ({ onSignup }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,7 +30,7 @@ const RegisterPage = ({ onLogin }) => {
 
     try {
       const newUser = register(email, password);
-      onLogin(newUser);
+      onSignup(newUser);
       navigate('/'); // Automatically log in and redirect to home
     } catch (err) {
       setError(err.message || 'Failed to create an account.');

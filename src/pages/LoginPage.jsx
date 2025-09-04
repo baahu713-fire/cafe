@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../services/authService'; // Updated import
 import {
   Container,
   Paper,
@@ -11,27 +10,29 @@ import {
   Grid,
   Alert
 } from '@mui/material';
+import { useCart } from '../hooks/useCart'; // Import the useCart hook
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { cart } = useCart(); // Get the cart from the context
 
   const handleSubmit = (event) => {
     event.preventDefault();
     setError('');
 
-    try {
-      const userData = login(email, password);
-      if (userData) {
-        onLogin(userData);
-        navigate('/'); // Redirect to home/menu page on successful login
+    const success = onLogin(email, password);
+
+    if (success) {
+      if (cart.length > 0) {
+        navigate('/cart'); // Redirect to cart if it's not empty
       } else {
-        setError('Invalid email or password. Please try again.');
+        navigate('/'); // Otherwise, redirect to home/menu page
       }
-    } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
+    } else {
+      setError('Invalid email or password. Please try again.');
     }
   };
 

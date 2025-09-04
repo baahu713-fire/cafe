@@ -1,13 +1,14 @@
 // src/services/orderService.js
 import db from './mockDatabase';
 
-export const placeOrder = async (userId, cart) => {
+export const placeOrder = async (userId, cart, comments) => {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const order = {
     id: db.nextOrderId++,
     userId,
     items: cart,
     total,
+    comments,
     status: 'Pending', // Initial status
     createdAt: new Date().toISOString(),
   };

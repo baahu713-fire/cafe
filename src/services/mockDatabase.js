@@ -1,42 +1,76 @@
 const db = {
   users: [
+    { id: 1, email: 'admin@cybercafe.com', password: 'password', role: 'admin', isAdmin: true },
+    { id: 2, email: 'customer@test.com', password: 'password', role: 'customer', isAdmin: false },
+  ],
+  nextUserId: 3,
+  menuItems: [
     {
       id: 1,
-      email: 'customer@example.com',
-      password: 'password123',
-      role: 'customer',
-      isAdmin: false,
+      name: 'Masala Dosa',
+      price: 150,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'breakfast']
     },
     {
       id: 2,
-      email: 'admin@example.com',
-      password: 'password123',
-      role: 'admin',
-      isAdmin: true,
+      name: 'Vada Pav',
+      price: 120,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'snacks']
     },
     {
       id: 3,
-      email: 'superadmin@example.com',
-      password: 'password123',
-      role: 'superadmin',
-      isAdmin: true,
+      name: 'Chole Bhature',
+      price: 200,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'lunch', 'dinner']
     },
-  ],
-  menuItems: [
-    { id: 1, name: 'Espresso', price: 2.50, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Espresso' },
-    { id: 2, name: 'Latte', price: 3.50, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Latte' },
-    { id: 3, name: 'Cappuccino', price: 3.50, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Cappuccino' },
-    { id: 4, name: 'Mocha', price: 4.00, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Mocha' },
-    { id: 5, name: 'Iced Coffee', price: 3.00, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Iced+Coffee' },
-    { id: 6, name: 'Croissant', price: 2.75, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Croissant' },
-    { id: 7, name: 'Muffin', price: 2.25, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Muffin' },
-    { id: 8, name: 'Cheesecake', price: 4.50, image: 'https://placehold.co/600x400/E2D5C3/5D4037?text=Cheesecake' },
+    {
+      id: 4,
+      name: 'Masala Chai',
+      price: 50,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'beverages']
+    },
+    {
+      id: 5,
+      name: 'Chicken Biryani',
+      price: 350,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'lunch', 'dinner']
+    },
+    {
+      id: 6,
+      name: 'Samosa',
+      price: 80,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'snacks']
+    },
+    {
+      id: 7,
+      name: 'Filter Coffee',
+      price: 70,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'beverages']
+    },
+    {
+      id: 8,
+      name: 'Lassi',
+      price: 100,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'beverages']
+    },
+    {
+      id: 9,
+      name: 'Pani Puri',
+      price: 60,
+      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      availability: ['all', 'snacks']
+    }
   ],
   orders: [],
-  feedback: [],
-  nextUserId: 4,
-  nextOrderId: 1,
-  CANCELLATION_WINDOW_MS: 60 * 1000, // 1 minute
+  favorites: [],
 };
 
 export default db;
