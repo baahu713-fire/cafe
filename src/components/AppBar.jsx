@@ -108,9 +108,9 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
 
   return (
     <>
-      <AppBar position="sticky">
+      <AppBar position="sticky" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, boxShadow: 'none' }}>
         <Toolbar>
-          <Typography variant="h6" component={RouterLink} to="/" sx={{ color: 'inherit', textDecoration: 'none' }}>
+          <Typography variant="h6" component={RouterLink} to="/" sx={{ color: theme.palette.primary.main, textDecoration: 'none', fontWeight: 700 }}>
             CyberCafe
           </Typography>
 
@@ -153,7 +153,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
                     <FavoriteIcon />
                   </IconButton>
                   <IconButton component={RouterLink} to="/cart" color="inherit">
-                    <Badge badgeContent={cartItemCount} color="secondary">
+                    <Badge badgeContent={cartItemCount} color="primary">
                       <ShoppingCartIcon />
                     </Badge>
                   </IconButton>
@@ -172,12 +172,12 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
                     <FavoriteIcon />
                   </IconButton>
                   <IconButton component={RouterLink} to="/cart" color="inherit">
-                    <Badge badgeContent={cartItemCount} color="secondary">
+                    <Badge badgeContent={cartItemCount} color="primary">
                       <ShoppingCartIcon />
                     </Badge>
                   </IconButton>
                   <Button color="inherit" component={RouterLink} to="/login">Login</Button>
-                  <Button color="inherit" component={RouterLink} to="/register">Register</Button>
+                  <Button variant="contained" component={RouterLink} to="/register">Register</Button>
                 </>
               )}
             </>
