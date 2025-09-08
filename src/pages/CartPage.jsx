@@ -41,6 +41,7 @@ const CartPage = ({ user }) => {
         orderError,
         orderSuccess,
         setOrderSuccess,
+        setOrderError
     } = useCart();
 
     useEffect(() => {
@@ -56,22 +57,22 @@ const CartPage = ({ user }) => {
     const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
     const handleCheckout = async () => {
-        if (user.isAdmin && !selectedUserId) {
-            alert('Please select a user to place the order for.');
-            return;
-        }
-        await placeOrder(comments, user.isAdmin ? selectedUserId : user.id);
+        await placeOrder(comments, selectedUserId);
     };
 
     useEffect(() => {
         if (orderSuccess) {
             const timer = setTimeout(() => {
                 setOrderSuccess(false);
-                navigate('/orders');
+                if (user?.isAdmin) {
+                    navigate('/admin');
+                } else {
+                    navigate('/orders');
+                }
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [orderSuccess, navigate, setOrderSuccess]);
+    }, [orderSuccess, navigate, setOrderSuccess, user]);
 
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
@@ -135,12 +136,17 @@ const CartPage = ({ user }) => {
                                     getOptionLabel={(option) => option.email}
                                     onChange={(event, newValue) => {
                                         setSelectedUserId(newValue ? newValue.id : null);
+                                        if (orderError && newValue) {
+                                          setOrderError(null);
+                                        }
                                     }}
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
                                             label="Search and select a user to order for"
                                             variant="outlined"
+                                            error={!!orderError}
+                                            helperText={orderError}
                                         />
                                     )}
                                 />

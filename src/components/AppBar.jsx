@@ -63,7 +63,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
       onClose={handleMenuClose}
     >
       <MenuItem component={RouterLink} to="/menu" onClick={handleMenuClose}>Menu</MenuItem>
-      {user && (
+      {user && !user.isAdmin && (
         <MenuItem component={RouterLink} to="/orders" onClick={handleMenuClose}>My Orders</MenuItem>
       )}
       {user && user.isAdmin && (
@@ -134,7 +134,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
                 <Button color="inherit" component={RouterLink} to="/menu">
                   Menu
                 </Button>
-                {user && (
+                {user && !user.isAdmin && (
                   <Button color="inherit" component={RouterLink} to="/orders">
                     My Orders
                   </Button>

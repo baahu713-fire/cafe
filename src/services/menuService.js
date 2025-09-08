@@ -11,7 +11,9 @@ export const addMenuItem = async (item) => {
   const newItem = {
     ...item,
     id: db.menuItems.length > 0 ? Math.max(...db.menuItems.map(i => i.id)) + 1 : 1,
-    price: parseFloat(item.price) // Ensure price is a number
+    price: parseFloat(item.price) || 0,
+    proportions: item.proportions || [],
+    availability: item.availability || [],
   };
   db.menuItems.push(newItem);
   return newItem;
@@ -22,7 +24,13 @@ export const updateMenuItem = async (itemId, updates) => {
   if (itemIndex === -1) {
     throw new Error('Menu item not found.');
   }
-  const updatedItem = { ...db.menuItems[itemIndex], ...updates, price: parseFloat(updates.price) };
+  
+  const updatedItem = { 
+    ...db.menuItems[itemIndex], 
+    ...updates,
+    price: parseFloat(updates.price) || 0,
+  };
+
   db.menuItems[itemIndex] = updatedItem;
   return updatedItem;
 };

@@ -80,7 +80,7 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <CartProvider user={user}>
-        <FavoritesProvider>
+        <FavoritesProvider user={user}>
           {/* We need a small component to get the cart context for the AppBar */}
           <AppContent user={user} onLogout={handleLogout} onLogin={handleLogin} onRegister={handleRegister} />
         </FavoritesProvider>

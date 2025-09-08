@@ -18,27 +18,29 @@ export const placeOrder = async (userId, cart, comments) => {
 
 export const getOrdersForUser = async (userId) => {
   // In a real app, you'd fetch this from a database.
-  return db.orders.filter(o => o.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return [...db.orders].filter(o => o.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
 export const getAllOrders = async () => {
   // In a real app, you'd fetch this from a database.
-  // For admins, we return all orders, sorted by date.
-  return db.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // For admins, we return a new sorted array to ensure state updates
+  return [...db.orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-export const cancelOrder = async (orderId, userId) => {
-  const orderIndex = db.orders.findIndex(o => o.id === orderId && o.userId === userId);
+export const cancelOrder = async (orderId) => {
+  const orderIndex = db.orders.findIndex(o => o.id === orderId);
   if (orderIndex === -1) {
-    throw new Error("Order not found or you don't have permission to cancel it.");
+    throw new Error("Order not found.");
   }
   const order = db.orders[orderIndex];
+
   const timeSinceOrder = new Date() - new Date(order.createdAt);
   if (timeSinceOrder > CANCELLATION_WINDOW_MS) {
-    throw new Error("Cancellation window has passed.");
+      throw new Error("Cancellation window has passed.");
   }
-  db.orders.splice(orderIndex, 1);
-  return { message: "Order cancelled successfully" };
+
+  order.status = 'Cancelled';
+  return order;
 };
 
 export const updateOrderStatus = async (orderId, newStatus) => {

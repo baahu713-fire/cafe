@@ -56,6 +56,11 @@ export const CartProvider = ({ children, user }) => {
       setOrderError("You must be logged in to place an order.");
       return;
     }
+
+    if (user.isAdmin && !userIdToOrderFor) {
+        setOrderError("Please select a user to place the order for.");
+        return;
+    }
     
     const finalUserId = user.isAdmin && userIdToOrderFor ? userIdToOrderFor : user.id;
 
@@ -86,6 +91,7 @@ export const CartProvider = ({ children, user }) => {
     orderError,
     orderSuccess,
     setOrderSuccess,
+    setOrderError, // Expose setOrderError
     itemCount: cart.reduce((count, item) => count + item.quantity, 0),
     totalPrice: cart.reduce((total, item) => total + item.price * item.quantity, 0),
   };
