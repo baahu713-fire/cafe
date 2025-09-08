@@ -71,6 +71,7 @@ const db = {
   ],
   orders: [],
   favorites: [],
+  feedback: [],
 };
 
 export default db;

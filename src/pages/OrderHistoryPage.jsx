@@ -39,7 +39,8 @@ const OrderHistoryPage = ({ user }) => {
             setOrders(orderData);
             setFeedback(feedbackData);
         } catch (err) {
-            setError('Failed to load order history.');
+            console.error("Detailed error fetching order history:", err);
+            setError(`Failed to load order history: ${err.message}`);
         } finally {
             setLoading(false);
         }
