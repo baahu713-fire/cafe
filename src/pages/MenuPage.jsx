@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getMenu } from '../services/menuService';
 import { useFavorites } from '../hooks/useFavorites';
-import { useCart } from '../hooks/useCart';
+import { useCart } from '../hooks/useCart.jsx';
 import {
   Container,
   Typography,
@@ -116,7 +116,7 @@ const MenuPage = () => {
                     {item.description}
                   </Typography>
                   <Typography variant="h6" color="text.primary" sx={{ mt: 1 }}>
-                    ${item.price.toFixed(2)}
+                    ₹{item.price.toFixed(2)}
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between', p: 2 }}>

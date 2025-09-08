@@ -1,5 +1,5 @@
 // src/services/orderService.js
-import db from './mockDatabase';
+import db, { CANCELLATION_WINDOW_MS } from './mockDatabase';
 
 export const placeOrder = async (userId, cart, comments) => {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -21,6 +21,12 @@ export const getOrdersForUser = async (userId) => {
   return db.orders.filter(o => o.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
+export const getAllOrders = async () => {
+  // In a real app, you'd fetch this from a database.
+  // For admins, we return all orders, sorted by date.
+  return db.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+};
+
 export const cancelOrder = async (orderId, userId) => {
   const orderIndex = db.orders.findIndex(o => o.id === orderId && o.userId === userId);
   if (orderIndex === -1) {
@@ -28,7 +34,7 @@ export const cancelOrder = async (orderId, userId) => {
   }
   const order = db.orders[orderIndex];
   const timeSinceOrder = new Date() - new Date(order.createdAt);
-  if (timeSinceOrder > db.CANCELLATION_WINDOW_MS) {
+  if (timeSinceOrder > CANCELLATION_WINDOW_MS) {
     throw new Error("Cancellation window has passed.");
   }
   db.orders.splice(orderIndex, 1);
@@ -59,4 +65,27 @@ export const updateOrderStatus = async (orderId, newStatus) => {
         }
     }
     return order;
+};
+
+export const settleOrder = async (orderId) => {
+  const order = db.orders.find(o => o.id === orderId);
+  if (!order) {
+    throw new Error('Order not found');
+  }
+  if (order.status !== 'Delivered') {
+    throw new Error('Only delivered orders can be settled.');
+  }
+  order.status = 'Settled';
+  return order;
+};
+
+export const settleUserOrders = async (userId) => {
+  const userOrders = db.orders.filter(o => o.userId === userId && o.status === 'Delivered');
+  if (userOrders.length === 0) {
+    throw new Error('No delivered orders to settle for this user.');
+  }
+  userOrders.forEach(order => {
+    order.status = 'Settled';
+  });
+  return userOrders;
 };

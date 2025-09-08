@@ -1,9 +1,12 @@
+export const CANCELLATION_WINDOW_MS = 60000; // 1 minute
+
 const db = {
   users: [
     { id: 1, email: 'admin@cybercafe.com', password: 'password', role: 'admin', isAdmin: true },
     { id: 2, email: 'customer@test.com', password: 'password', role: 'customer', isAdmin: false },
   ],
   nextUserId: 3,
+  nextOrderId: 1,
   menuItems: [
     {
       id: 1,

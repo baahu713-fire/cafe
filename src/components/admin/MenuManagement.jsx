@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getMenu, addMenuItem, updateMenuItem, deleteMenuItem } from '../../services/menuService';
 import {
   Box,
@@ -32,6 +32,7 @@ const MenuManagement = ({ user }) => {
     const [currentItem, setCurrentItem] = useState(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const fetchMenu = useCallback(async () => {
         try {
@@ -50,7 +51,7 @@ const MenuManagement = ({ user }) => {
     }, [fetchMenu, user]);
 
     const handleFormOpen = (item = null) => {
-        setCurrentItem(item ? { ...item } : { name: '', price: '', image: '' });
+        setCurrentItem(item ? { ...item } : { name: '', price: '', image: '' , description: ''});
         setFormOpen(true);
     };
 
@@ -99,6 +100,13 @@ const MenuManagement = ({ user }) => {
     const handleChange = (e) => {
         setCurrentItem({ ...currentItem, [e.target.name]: e.target.value });
     };
+
+    const filteredMenu = useMemo(() => {
+        return menu.filter(item => 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [menu, searchTerm]);
     
     return (
         <>
@@ -106,6 +114,14 @@ const MenuManagement = ({ user }) => {
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>Menu Management</Typography>
                 <Button variant="contained" onClick={() => handleFormOpen()}>Add New Item</Button>
             </Box>
+            <TextField 
+                label="Search by Name or Description"
+                variant="outlined"
+                fullWidth
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                sx={{ mb: 2 }}
+            />
             {loading && <CircularProgress />}
             {error && <Alert severity="error">{error}</Alert>}
             {!loading && !error && (
@@ -113,7 +129,7 @@ const MenuManagement = ({ user }) => {
                     <Table>
                         <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Image URL</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
                         <TableBody>
-                            {menu.map(item => (
+                            {filteredMenu.map(item => (
                                 <TableRow key={item.id}> 
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>₹{item.price.toFixed(2)}</TableCell>
@@ -128,20 +144,19 @@ const MenuManagement = ({ user }) => {
                     </Table>
                 </TableContainer>
             )}
-            {/* Add/Edit Dialog */}
             <Dialog open={formOpen} onClose={handleFormClose}>
                 <DialogTitle>{currentItem?.id ? 'Edit Menu Item' : 'Add New Menu Item'}</DialogTitle>
                 <DialogContent>
                     <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} />
                     <TextField margin="dense" name="price" label="Price" type="number" fullWidth variant="outlined" value={currentItem?.price || ''} onChange={handleChange} />
                     <TextField margin="dense" name="image" label="Image URL" type="text" fullWidth variant="outlined" value={currentItem?.image || ''} onChange={handleChange} />
+                    <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleFormClose}>Cancel</Button>
                     <Button onClick={handleSave}>Save</Button>
                 </DialogActions>
             </Dialog>
-            {/* Delete Confirmation Dialog */}
             <Dialog
                 open={deleteConfirmOpen}
                 onClose={handleDeleteCancel}

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { placeOrder } from '../services/orderService';
 import {
     Container,
     Typography,
@@ -16,46 +15,70 @@ import {
     Box,
     Alert,
     Link,
-    TextField
+    TextField,
+    Snackbar,
+    FormControl,
+    Autocomplete
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useCart } from '../hooks/useCart';
+import { useCart } from '../hooks/useCart.jsx';
+import { getAllUsers } from '../services/userService';
 
 const CartPage = ({ user }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [comments, setComments] = useState('');
+    const [users, setUsers] = useState([]);
+    const [selectedUserId, setSelectedUserId] = useState(null);
     const navigate = useNavigate();
-    const { cart, updateCart, removeFromCart, clearCart } = useCart();
+    const {
+        cart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+        placeOrder,
+        isPlacingOrder,
+        orderError,
+        orderSuccess,
+        setOrderSuccess,
+    } = useCart();
+
+    useEffect(() => {
+        if (user?.isAdmin) {
+            const fetchUsers = async () => {
+                const allUsers = await getAllUsers();
+                setUsers(allUsers);
+            };
+            fetchUsers();
+        }
+    }, [user]);
 
     const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
     const handleCheckout = async () => {
-        if (!user) {
-            setError('You must be logged in to place an order.');
+        if (user.isAdmin && !selectedUserId) {
+            alert('Please select a user to place the order for.');
             return;
         }
-        setLoading(true);
-        setError('');
-        try {
-            await placeOrder(user.id, cart, comments);
-            clearCart(); // This should now work as expected.
-            navigate('/orders'); // Redirect to order history.
-        } catch (err) {
-            setError('Failed to place order. Please try again.');
-        } finally {
-            setLoading(false);
-        }
+        await placeOrder(comments, user.isAdmin ? selectedUserId : user.id);
     };
+
+    useEffect(() => {
+        if (orderSuccess) {
+            const timer = setTimeout(() => {
+                setOrderSuccess(false);
+                navigate('/orders');
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [orderSuccess, navigate, setOrderSuccess]);
 
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                 Your Cart
             </Typography>
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {orderError && <Alert severity="error" sx={{ mb: 2 }}>{orderError}</Alert>}
             {cart.length === 0 ? (
                 <Paper sx={{ p: 3, textAlign: 'center' }}>
                     <Typography variant="h6">Your cart is empty.</Typography>
@@ -83,11 +106,11 @@ const CartPage = ({ user }) => {
                                         <TableCell align="right">₹{item.price.toFixed(2)}</TableCell>
                                         <TableCell align="center">
                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <IconButton size="small" onClick={() => updateCart(item, item.quantity - 1)}>
+                                                <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
                                                     <RemoveCircleOutlineIcon />
                                                 </IconButton>
                                                 <Typography sx={{ mx: 2 }}>{item.quantity}</Typography>
-                                                <IconButton size="small" onClick={() => updateCart(item, item.quantity + 1)}>
+                                                <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
                                                     <AddCircleOutlineIcon />
                                                 </IconButton>
                                             </Box>
@@ -103,6 +126,28 @@ const CartPage = ({ user }) => {
                             </TableBody>
                         </Table>
                     </TableContainer>
+
+                    {user?.isAdmin && (
+                        <Box sx={{ mt: 3 }}>
+                            <FormControl fullWidth>
+                                <Autocomplete
+                                    options={users}
+                                    getOptionLabel={(option) => option.email}
+                                    onChange={(event, newValue) => {
+                                        setSelectedUserId(newValue ? newValue.id : null);
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Search and select a user to order for"
+                                            variant="outlined"
+                                        />
+                                    )}
+                                />
+                            </FormControl>
+                        </Box>
+                    )}
+
                     <Box sx={{ mt: 3 }}>
                         <TextField
                             fullWidth
@@ -131,9 +176,9 @@ const CartPage = ({ user }) => {
                                 size="large" 
                                 sx={{ ml: 3 }} 
                                 onClick={handleCheckout}
-                                disabled={!user || loading}
+                                disabled={!user || isPlacingOrder}
                             >
-                                {loading ? 'Processing...' : 'Proceed to Checkout'}
+                                {isPlacingOrder ? 'Processing...' : 'Proceed to Checkout'}
                             </Button>
                          </Box>
                     </Box>
@@ -144,6 +189,12 @@ const CartPage = ({ user }) => {
                     }
                 </>
             )}
+            <Snackbar
+                open={orderSuccess}
+                autoHideDuration={3000}
+                onClose={() => setOrderSuccess(false)}
+                message="Order placed successfully! Redirecting..."
+            />
         </Container>
     );
 };
