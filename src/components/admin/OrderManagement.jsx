@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllOrders, updateOrderStatus, settleOrder, cancelOrder } from '../../services/orderService';
-import { getAllUsers } from '../../services/userService'; 
+import { getAllUsers } from '../../services/userService';
 import { CANCELLATION_WINDOW_MS } from '../../services/mockDatabase';
 import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
 } from '@mui/material';
 
@@ -48,30 +48,30 @@ const OrderManagement = () => {
   useEffect(() => {
     const timers = {};
     orders.forEach(order => {
-        if (order.status === 'Pending') {
-            const intervalId = setInterval(() => {
-                const timeSinceOrder = new Date() - new Date(order.createdAt);
-                const remainingTime = CANCELLATION_WINDOW_MS - timeSinceOrder;
-                if (remainingTime > 0) {
-                    setCountdown(prev => ({ ...prev, [order.id]: Math.ceil(remainingTime / 1000) }));
-                } else {
-                    setCountdown(prev => ({ ...prev, [order.id]: 0 }));
-                    clearInterval(intervalId);
-                }
-            }, 1000);
-            timers[order.id] = intervalId;
-        }
+      if (order.status === 'Pending') {
+        const intervalId = setInterval(() => {
+          const timeSinceOrder = new Date() - new Date(order.createdAt);
+          const remainingTime = CANCELLATION_WINDOW_MS - timeSinceOrder;
+          if (remainingTime > 0) {
+            setCountdown(prev => ({ ...prev, [order.id]: Math.ceil(remainingTime / 1000) }));
+          } else {
+            setCountdown(prev => ({ ...prev, [order.id]: 0 }));
+            clearInterval(intervalId);
+          }
+        }, 1000);
+        timers[order.id] = intervalId;
+      }
     });
 
     return () => {
-        Object.values(timers).forEach(clearInterval);
+      Object.values(timers).forEach(clearInterval);
     };
-}, [orders]);
+  }, [orders]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       const updatedOrder = await updateOrderStatus(orderId, newStatus);
-      setOrders(prevOrders => 
+      setOrders(prevOrders =>
         prevOrders.map(o => (o.id === orderId ? updatedOrder : o))
       );
     } catch (err) {
@@ -132,6 +132,10 @@ const OrderManagement = () => {
     }
   };
 
+  const calculateOrderTotal = (items) => {
+    return items.reduce((total, item) => total + item.price * item.quantity, 0);
+  };
+
   const filteredOrders = useMemo(() => {
     return orders
       .filter(order => {
@@ -161,7 +165,7 @@ const OrderManagement = () => {
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h5" gutterBottom>Manage All Orders</Typography>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
         <TextField
           label="Search by ID, Email, or Status"
           variant="outlined"
@@ -179,6 +183,7 @@ const OrderManagement = () => {
             shrink: true,
           }}
         />
+        <Button onClick={() => setFilterDate('')} variant="outlined">Clear</Button>
       </Box>
       <TableContainer>
         <Table stickyHeader aria-label="sticky table">
@@ -187,6 +192,7 @@ const OrderManagement = () => {
               <TableCell>Order ID</TableCell>
               <TableCell>Ordered By</TableCell>
               <TableCell>Order Date</TableCell>
+              <TableCell>Total Price</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -197,6 +203,7 @@ const OrderManagement = () => {
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
                 <TableCell>{users[order.userId] || 'Unknown User'}</TableCell>
                 <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
+                <TableCell>₹{calculateOrderTotal(order.items).toFixed(2)}</TableCell>
                 <TableCell>
                   <Select
                     value={order.status}
@@ -214,23 +221,23 @@ const OrderManagement = () => {
                 </TableCell>
                 <TableCell align="right">
                   {order.status === 'Pending' && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <Button
-                              variant="contained"
-                              color="error"
-                              size="small"
-                              sx={{ mr: 1 }}
-                              onClick={() => handleOpenCancelDialog(order.id)}
-                              disabled={countdown[order.id] === 0}
-                          >
-                              Cancel
-                          </Button>
-                          {countdown[order.id] > 0 && (
-                            <Typography variant="caption" color="text.secondary">
-                                {countdown[order.id]}s
-                            </Typography>
-                          )}
-                      </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        sx={{ mr: 1 }}
+                        onClick={() => handleOpenCancelDialog(order.id)}
+                        disabled={countdown[order.id] === 0}
+                      >
+                        Cancel
+                      </Button>
+                      {countdown[order.id] > 0 && (
+                        <Typography variant="caption" color="text.secondary">
+                          {countdown[order.id]}s
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                   <Button
                     variant="contained"

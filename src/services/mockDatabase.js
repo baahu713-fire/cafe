@@ -12,7 +12,8 @@ const db = {
       id: 1,
       name: 'Masala Dosa',
       price: 150,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/masala-dosa.jpg',
+      description: 'A crispy South Indian crepe made from fermented rice and lentil batter, filled with a savory potato stuffing.',
       availability: ['All', 'Breakfast'],
       proportions: [{ name: 'Full', price: 150 }]
     },
@@ -20,7 +21,8 @@ const db = {
       id: 2,
       name: 'Vada Pav',
       price: 120,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/vada-pav.jpg',
+      description: 'A popular Mumbai street food, featuring a spiced potato fritter in a soft bread roll.',
       availability: ['All', 'Snacks'],
       proportions: [{ name: 'Full', price: 120 }]
     },
@@ -28,7 +30,8 @@ const db = {
       id: 3,
       name: 'Chole Bhature',
       price: 200,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/chole-bhature.jpg',
+      description: 'A classic Punjabi dish with spicy chickpeas and fluffy, deep-fried bread.',
       availability: ['All', 'Lunch', 'Dinner'],
       proportions: [{ name: 'Full', price: 200 }]
     },
@@ -36,7 +39,8 @@ const db = {
       id: 4,
       name: 'Masala Chai',
       price: 50,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/masala-chai.jpg',
+      description: 'Aromatic and spiced Indian tea made with a blend of herbs and spices.',
       availability: ['All', 'Beverages'],
       proportions: [{ name: 'Full', price: 50 }]
     },
@@ -44,7 +48,8 @@ const db = {
       id: 5,
       name: 'Chicken Biryani',
       price: 350,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/chicken-biryani.jpg',
+      description: 'A flavorful and aromatic rice dish made with tender chicken and a blend of rich spices.',
       availability: ['All', 'Lunch', 'Dinner'],
       proportions: [{ name: 'Full', price: 350 }]
     },
@@ -52,7 +57,8 @@ const db = {
       id: 6,
       name: 'Samosa',
       price: 80,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/samosa.jpg',
+      description: 'A crispy, triangular pastry filled with a savory mixture of spiced potatoes and peas.',
       availability: ['All', 'Snacks'],
       proportions: [{ name: 'Full', price: 80 }]
     },
@@ -60,7 +66,8 @@ const db = {
       id: 7,
       name: 'Filter Coffee',
       price: 70,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/filter-coffee.jpg',
+      description: 'A traditional South Indian coffee, brewed strong and served with frothy milk.',
       availability: ['All', 'Beverages'],
       proportions: [{ name: 'Full', price: 70 }]
     },
@@ -68,7 +75,8 @@ const db = {
       id: 8,
       name: 'Lassi',
       price: 100,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/lassi.jpg',
+      description: 'A creamy and refreshing yogurt-based drink, perfect for cooling down.',
       availability: ['All', 'Beverages'],
       proportions: [{ name: 'Full', price: 100 }]
     },
@@ -76,7 +84,8 @@ const db = {
       id: 9,
       name: 'Pani Puri',
       price: 60,
-      image: 'https://images.unsplash.com/photo-1626500448329-b6311b59b64c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1770&q=80',
+      image: '/images/pani-puri.jpg',
+      description: 'A popular street snack with hollow, crispy shells filled with a tangy and spicy mixture.',
       availability: ['All', 'Snacks'],
       proportions: [{ name: 'Full', price: 60 }]
     }

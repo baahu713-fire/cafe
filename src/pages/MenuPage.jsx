@@ -7,7 +7,6 @@ import {
   Typography,
   Grid,
   Card,
-  CardMedia,
   CardContent,
   CardActions,
   Button,
@@ -95,17 +94,14 @@ const MenuPage = () => {
     if (!menuItems) return [];
     const lowercasedCategory = selectedCategory.toLowerCase();
 
-    // Filter by search term first
     const searchedItems = menuItems.filter((item) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // If 'all' is selected, no more filtering is needed
     if (lowercasedCategory === 'all') {
       return searchedItems;
     }
 
-    // Filter by the selected category
     return searchedItems.filter((item) => {
       let availability = [];
       if (Array.isArray(item.availability)) {
@@ -157,20 +153,28 @@ const MenuPage = () => {
         </ToggleButtonGroup>
       </Box>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={4} alignItems="stretch">
         {filteredMenuItems.map((item) => {
           const isFavorited = favorites.some((fav) => fav.id === item.id);
           const displayPrice = item.proportions && item.proportions.length > 0 ? item.proportions[0].price : item.price;
 
           return (
-            <Grid item key={item.id} xs={12} sm={6} md={4}>
+            <Grid item key={item.id} xs={12} sm={6} md={3}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: '16px', boxShadow: 3 }}>
-                <CardMedia component="img" height="240" image={item.image} alt={item.name} />
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
+                <Box
+                  sx={{
+                    height: 200,
+                    backgroundImage: `url(${item.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                  }}
+                />
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography gutterBottom variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
                     {item.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ minHeight: '4.5em' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, wordWrap: 'break-word' }}>
                     {item.description}
                   </Typography>
                   <Typography variant="h6" color="text.primary" sx={{ mt: 1 }}>
