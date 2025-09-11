@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../services/authService';
 import {
   Container,
   Paper,
@@ -12,14 +11,16 @@ import {
   Alert
 } from '@mui/material';
 
-const RegisterPage = ({ onSignup }) => {
+// The onRegister prop will now be passed from App.jsx to handle registration logic.
+const RegisterPage = ({ onRegister }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
 
@@ -29,11 +30,15 @@ const RegisterPage = ({ onSignup }) => {
     }
 
     try {
-      const newUser = register(email, password);
-      onSignup(newUser);
-      navigate('/'); // Automatically log in and redirect to home
+      // We now pass an object with name, email, and password to the handler.
+      const result = await onRegister({ name, email, password });
+      if (result.success) {
+        navigate('/'); // Redirect to home on successful registration
+      } else {
+        setError(result.message || 'Failed to create an account.');
+      }
     } catch (err) {
-      setError(err.message || 'Failed to create an account.');
+      setError(err.message || 'An unexpected error occurred.');
     }
   };
 
@@ -58,6 +63,17 @@ const RegisterPage = ({ onSignup }) => {
         </Typography>
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
           {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="name"
+            label="Full Name"
+            name="name"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
           <TextField
             margin="normal"
             required

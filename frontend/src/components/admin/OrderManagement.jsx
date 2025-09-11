@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getAllOrders, updateOrderStatus, settleOrder, cancelOrder } from '../../services/orderService';
+import { getAllOrders, updateOrderStatus, cancelOrder } from '../../services/orderService';
 import { getAllUsers } from '../../services/userService';
-import { CANCELLATION_WINDOW_MS } from '../../services/mockDatabase';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
@@ -17,56 +16,32 @@ const OrderManagement = () => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
-  const [countdown, setCountdown] = useState({});
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [ordersData, usersData] = await Promise.all([
+        getAllOrders(),
+        getAllUsers(),
+      ]);
+      setOrders(ordersData);
+      const usersMap = usersData.reduce((acc, user) => {
+        acc[user.id] = user.email;
+        return acc;
+      }, {});
+      setUsers(usersMap);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch data. Please try again later.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [ordersData, usersData] = await Promise.all([
-          getAllOrders(),
-          getAllUsers(),
-        ]);
-        setOrders(ordersData);
-        const usersMap = usersData.reduce((acc, user) => {
-          acc[user.id] = user.email;
-          return acc;
-        }, {});
-        setUsers(usersMap);
-        setError(null);
-      } catch (err) {
-        setError('Failed to fetch data. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
-
-  useEffect(() => {
-    const timers = {};
-    orders.forEach(order => {
-      if (order.status === 'Pending') {
-        const intervalId = setInterval(() => {
-          const timeSinceOrder = new Date() - new Date(order.createdAt);
-          const remainingTime = CANCELLATION_WINDOW_MS - timeSinceOrder;
-          if (remainingTime > 0) {
-            setCountdown(prev => ({ ...prev, [order.id]: Math.ceil(remainingTime / 1000) }));
-          } else {
-            setCountdown(prev => ({ ...prev, [order.id]: 0 }));
-            clearInterval(intervalId);
-          }
-        }, 1000);
-        timers[order.id] = intervalId;
-      }
-    });
-
-    return () => {
-      Object.values(timers).forEach(clearInterval);
-    };
-  }, [orders]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -103,13 +78,14 @@ const OrderManagement = () => {
   const handleSettleOrder = async () => {
     if (selectedOrderId) {
       try {
-        const updatedOrder = await settleOrder(selectedOrderId);
+        // Re-using updateOrderStatus for settling, as it's just a status change
+        const updatedOrder = await updateOrderStatus(selectedOrderId, 'Settled');
         setOrders(prevOrders =>
           prevOrders.map(o => (o.id === selectedOrderId ? updatedOrder : o))
         );
       } catch (err) {
         console.error("Failed to settle order:", err);
-        alert(err.message);
+        alert(err.response?.data?.message || err.message);
       } finally {
         handleCloseSettleDialog();
       }
@@ -119,27 +95,26 @@ const OrderManagement = () => {
   const handleCancelOrder = async () => {
     if (selectedOrderId) {
       try {
+        // Using the new dedicated cancelOrder service function
         const updatedOrder = await cancelOrder(selectedOrderId);
         setOrders(prevOrders =>
           prevOrders.map(o => (o.id === selectedOrderId ? updatedOrder : o))
         );
       } catch (err) {
         console.error("Failed to cancel order:", err);
-        alert(err.message);
+        // The backend provides a specific error message if the window has passed
+        alert(err.response?.data?.message || 'Failed to cancel order.');
       } finally {
         handleCloseCancelDialog();
       }
     }
   };
 
-  const calculateOrderTotal = (items) => {
-    return items.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
-
   const filteredOrders = useMemo(() => {
     return orders
       .filter(order => {
-        const userEmail = users[order.userId] || '';
+        // The backend gives us user_id, which we use to look up the email
+        const userEmail = users[order.user_id] || '';
         const searchTermLower = searchTerm.toLowerCase();
         return (
           order.id.toString().includes(searchTermLower) ||
@@ -149,7 +124,7 @@ const OrderManagement = () => {
       })
       .filter(order => {
         if (!filterDate) return true;
-        const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+        const orderDate = new Date(order.created_at).toISOString().split('T')[0];
         return orderDate === filterDate;
       });
   }, [orders, users, searchTerm, filterDate]);
@@ -201,14 +176,15 @@ const OrderManagement = () => {
             {filteredOrders.map((order) => (
               <TableRow hover key={order.id}>
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
-                <TableCell>{users[order.userId] || 'Unknown User'}</TableCell>
-                <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
-                <TableCell>₹{calculateOrderTotal(order.items).toFixed(2)}</TableCell>
+                <TableCell>{users[order.user_id] || 'Unknown User'}</TableCell>
+                <TableCell>{new Date(order.created_at).toLocaleString()}</TableCell>
+                {/* The total is now pre-calculated by the backend */}
+                <TableCell>₹{parseFloat(order.total).toFixed(2)}</TableCell>
                 <TableCell>
                   <Select
                     value={order.status}
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    disabled={order.status === 'Delivered' || order.status === 'Settled' || order.status === 'Cancelled'}
+                    disabled={['Delivered', 'Settled', 'Cancelled'].includes(order.status)}
                     size="small"
                     sx={{ minWidth: 120 }}
                   >
@@ -221,28 +197,20 @@ const OrderManagement = () => {
                 </TableCell>
                 <TableCell align="right">
                   {order.status === 'Pending' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                       <Button
                         variant="contained"
                         color="error"
                         size="small"
-                        sx={{ mr: 1 }}
                         onClick={() => handleOpenCancelDialog(order.id)}
-                        disabled={countdown[order.id] === 0}
                       >
                         Cancel
                       </Button>
-                      {countdown[order.id] > 0 && (
-                        <Typography variant="caption" color="text.secondary">
-                          {countdown[order.id]}s
-                        </Typography>
-                      )}
-                    </Box>
                   )}
                   <Button
                     variant="contained"
                     color="success"
                     size="small"
+                    sx={{ ml: 1}} // Add margin left for spacing
                     onClick={() => handleOpenSettleDialog(order.id)}
                     disabled={order.status !== 'Delivered'}
                   >

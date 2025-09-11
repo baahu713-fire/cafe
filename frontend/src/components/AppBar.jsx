@@ -97,10 +97,10 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
             <p>Profile</p>
         </MenuItem>
       ) : (
-          <>
-            <MenuItem component={RouterLink} to="/login" onClick={handleMenuClose}>Login</MenuItem>
-            <MenuItem component={RouterLink} to="/register" onClick={handleMenuClose}>Register</MenuItem>
-          </>
+        [
+            <MenuItem key="login" component={RouterLink} to="/login" onClick={handleMenuClose}>Login</MenuItem>,
+            <MenuItem key="register" component={RouterLink} to="/register" onClick={handleMenuClose}>Register</MenuItem>
+        ]
       )}
     </Menu>
   );

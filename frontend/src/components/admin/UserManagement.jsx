@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllUsers } from '../../services/userService';
-import { getAllOrders, settleUserOrders } from '../../services/orderService';
+import { getAllOrders, settleAllUserOrders } from '../../services/orderService';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
   Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
@@ -15,25 +15,25 @@ const UserManagement = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [usersData, ordersData] = await Promise.all([
-          getAllUsers(),
-          getAllOrders(),
-        ]);
-        setUsers(usersData);
-        setOrders(ordersData);
-        setError(null);
-      } catch (err) {
-        setError('Failed to fetch data. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [usersData, ordersData] = await Promise.all([
+        getAllUsers(),
+        getAllOrders(),
+      ]);
+      setUsers(usersData);
+      setOrders(ordersData);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch data. Please try again later.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -42,7 +42,7 @@ const UserManagement = () => {
 
     const stats = {};
     users.forEach(user => {
-      const userOrders = orders.filter(o => o.userId === user.id);
+      const userOrders = orders.filter(o => o.user_id === user.id);
       stats[user.id] = {
         delivered: userOrders.filter(o => o.status === 'Delivered').length,
         settled: userOrders.filter(o => o.status === 'Settled').length,
@@ -64,13 +64,13 @@ const UserManagement = () => {
   const handleSettleAll = async () => {
     if (selectedUserId) {
       try {
-        const settledOrders = await settleUserOrders(selectedUserId);
-        const ordersData = await getAllOrders();
-        setOrders(ordersData);
-
+        // Use the new service function to settle all orders for the user
+        await settleAllUserOrders(selectedUserId);
+        // Refetch all data to get the latest status
+        await fetchData();
       } catch (err) {
         console.error("Failed to settle user's orders:", err);
-        alert(err.message);
+        alert(err.response?.data?.message || err.message);
       } finally {
         handleCloseSettleDialog();
       }

@@ -5,7 +5,7 @@ const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
-export const CartProvider = ({ children, user }) => {
+const CartProvider = ({ children, user }) => {
   const [cart, setCart] = useState(() => {
     try {
         const savedCart = localStorage.getItem('cart');
@@ -102,3 +102,5 @@ export const CartProvider = ({ children, user }) => {
     </CartContext.Provider>
   );
 };
+
+export default CartProvider;
