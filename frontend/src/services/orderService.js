@@ -29,7 +29,7 @@ export const placeOrder = async (orderData) => {
     return adaptOrderToFrontend(response.data);
 };
 
-export const getOrdersForUser = async () => {
+export const getMyOrders = async () => {
     const response = await api.get('/orders/my-orders');
     return adaptOrdersToFrontend(response.data);
 };

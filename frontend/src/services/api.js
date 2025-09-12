@@ -27,4 +27,27 @@ api.interceptors.request.use(
     }
 );
 
+// Add a response interceptor to handle global 401 errors
+api.interceptors.response.use(
+    // If the response is successful, just return it
+    (response) => response,
+    // If there's an error, handle it
+    (error) => {
+        // Check if the error is a 401 Unauthorized
+        if (error.response && error.response.status === 401) {
+            console.log('Session expired. Logging out.');
+            
+            // Perform the core logout actions directly to avoid circular dependencies
+            localStorage.removeItem('user');
+            
+            // Reload the page. The routing logic will see that the user is no longer
+            // authenticated and automatically redirect to the login page.
+            window.location.reload();
+        }
+        
+        // For any other errors, just reject the promise so the calling code can handle it
+        return Promise.reject(error);
+    }
+);
+
 export default api;

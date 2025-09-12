@@ -89,16 +89,23 @@ const MenuManagement = ({ user }) => {
             setFormError('Item name is required.');
             return;
         }
-        if (!currentItem.proportions || currentItem.proportions.some(p => !p.name || !p.price)) {
-            setFormError('All proportions must have a name and a price.');
+        
+        const hasInvalidProportion = currentItem.proportions.some(p => !p.name || p.price === '' || isNaN(parseFloat(p.price)));
+        if (!currentItem.proportions || hasInvalidProportion) {
+            setFormError('All proportions must have a name and a valid price.');
             return;
         }
 
         try {
+            const proportionsWithNumericPrices = currentItem.proportions.map(p => ({ 
+                ...p, 
+                price: parseFloat(p.price) 
+            }));
+
             const itemToSave = {
                 ...currentItem,
-                price: parseFloat(currentItem.proportions?.[0]?.price) || 0,
-                proportions: currentItem.proportions.map(p => ({ ...p, price: parseFloat(p.price) || 0 }))
+                price: proportionsWithNumericPrices[0]?.price || 0,
+                proportions: proportionsWithNumericPrices
             };
 
             if (itemToSave.id) {

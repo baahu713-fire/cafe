@@ -19,7 +19,6 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
-import FeedbackPage from './pages/FeedbackPage.jsx';
 // Import the new auth service methods
 import { login, register, logout, getCurrentUser } from './services/authService.js';
 import CartProvider, { useCart } from './hooks/useCart.jsx';
@@ -76,7 +75,7 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <CartProvider>
+      <CartProvider user={user}>
         <FavoritesProvider user={user}>
           <AppContent user={user} onLogout={handleLogout} onLogin={handleLogin} onRegister={handleRegister} />
         </FavoritesProvider>
@@ -116,10 +115,6 @@ const AppContent = ({ user, onLogout, onLogin, onRegister }) => {
         <Route 
           path="/favorites" 
           element={user ? <FavoritesPage /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/feedback/:orderId" 
-          element={user ? <FeedbackPage user={user} /> : <Navigate to="/login" />} 
         />
       </Routes>
     </>

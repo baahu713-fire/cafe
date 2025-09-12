@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Container,
     Typography,
@@ -32,6 +32,8 @@ const CartPage = () => {
         orderSuccess
     } = useCart();
 
+    const [comment, setComment] = useState('');
+
     if (orderSuccess) {
         return (
             <Container maxWidth="sm" sx={{ mt: 8, textAlign: 'center' }}>
@@ -43,6 +45,12 @@ const CartPage = () => {
             </Container>
         );
     }
+    
+    const getPrice = (item) => {
+        const price = item.proportion?.price ?? item.price;
+        const numericPrice = parseFloat(price);
+        return isNaN(numericPrice) ? 0 : numericPrice;
+    };
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -63,31 +71,36 @@ const CartPage = () => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {cart.map(item => (
-                                    <TableRow key={item.id}>
-                                        <TableCell component="th" scope="row">
-                                            {item.name}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
-                                                    <Remove />
+                                {cart.map(item => {
+                                    const itemPrice = getPrice(item);
+                                    const totalItemPrice = itemPrice * item.quantity;
+
+                                    return (
+                                        <TableRow key={`${item.id}-${item.proportion?.name}`}>
+                                            <TableCell component="th" scope="row">
+                                                {item.name}{item.proportion ? ` - ${item.proportion.name}` : ''}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity - 1, item.proportion?.name)}>
+                                                        <Remove />
+                                                    </IconButton>
+                                                    <Typography sx={{ mx: 2 }}>{item.quantity}</Typography>
+                                                    <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity + 1, item.proportion?.name)}>
+                                                        <Add />
+                                                    </IconButton>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell align="right">₹{itemPrice.toFixed(2)}</TableCell>
+                                            <TableCell align="right">₹{totalItemPrice.toFixed(2)}</TableCell>
+                                            <TableCell align="center">
+                                                <IconButton color="error" onClick={() => removeFromCart(item.id, item.proportion?.name)}>
+                                                    <Delete />
                                                 </IconButton>
-                                                <Typography sx={{ mx: 2 }}>{item.quantity}</Typography>
-                                                <IconButton size="small" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
-                                                    <Add />
-                                                </IconButton>
-                                            </Box>
-                                        </TableCell>
-                                        <TableCell align="right">₹{item.price.toFixed(2)}</TableCell>
-                                        <TableCell align="right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
-                                        <TableCell align="center">
-                                            <IconButton color="error" onClick={() => removeFromCart(item.id)}>
-                                                <Delete />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>
@@ -99,13 +112,15 @@ const CartPage = () => {
                             rows={3}
                             fullWidth
                             variant="outlined"
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
                             sx={{ my: 2 }}
                         />
                         <Button 
                             variant="contained" 
                             color="primary" 
                             size="large" 
-                            onClick={() => placeOrder('No comments')} // Replace with actual comment
+                            onClick={() => placeOrder(comment)} // Pass the comment to the placeOrder function
                             disabled={isPlacingOrder}
                         >
                             {isPlacingOrder ? <CircularProgress size={24} /> : 'Place Order'}

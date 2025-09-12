@@ -6,30 +6,71 @@ import {
     Typography,
     Button,
     Box,
-    Select,
-    MenuItem,
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Radio,
+    RadioGroup,
     FormControl,
-    InputLabel,
-    IconButton
+    FormControlLabel
 } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useCart } from '../hooks/useCart';
 import { useFavorites } from '../hooks/useFavorites';
 
+const ProportionSelectionDialog = ({ open, onClose, item, onAddToCart }) => {
+    if (!item.proportions || item.proportions.length === 0) {
+        return null;
+    }
+
+    const [selected, setSelected] = useState(item.proportions[0]);
+
+    const handleChange = (e) => {
+        const newProportion = item.proportions.find(p => p.name === e.target.value);
+        if (newProportion) {
+            setSelected(newProportion);
+        }
+    };
+
+    const handleConfirm = () => {
+        onAddToCart(selected);
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose}>
+            <DialogTitle>Select a size for {item.name}</DialogTitle>
+            <DialogContent>
+                <FormControl component="fieldset" sx={{ mt: 1 }}>
+                    <RadioGroup
+                        name="proportion-radio-group"
+                        value={selected.name}
+                        onChange={handleChange}
+                    >
+                        {item.proportions.map((p) => (
+                            <FormControlLabel
+                                key={p.name}
+                                value={p.name}
+                                control={<Radio />}
+                                label={`${p.name} - ₹${parseFloat(p.price).toFixed(2)}`}
+                            />
+                        ))}
+                    </RadioGroup>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handleConfirm}>Add to Cart</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 const MenuItemCard = ({ item }) => {
     const { addToCart } = useCart();
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
-    const [selectedProportion, setSelectedProportion] = useState(item.proportions[0]);
-
-    const handleAddToCart = () => {
-        addToCart({ ...item, proportion: selectedProportion });
-    };
-
-    const handleProportionChange = (e) => {
-        const newProportionName = e.target.value;
-        const newProportion = item.proportions.find(p => p.name === newProportionName);
-        setSelectedProportion(newProportion);
-    };
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const handleToggleFavorite = () => {
         if (isFavorite(item.id)) {
@@ -38,6 +79,34 @@ const MenuItemCard = ({ item }) => {
             addFavorite(item);
         }
     };
+    
+    const handleAddToCartClick = () => {
+        const hasProportions = item.proportions && item.proportions.length > 0;
+
+        if (hasProportions) {
+            setIsDialogOpen(true);
+        } else {
+            const numericPrice = parseFloat(item.price);
+            addToCart({ 
+                ...item, 
+                price: numericPrice,
+                proportion: { name: 'Standard', price: numericPrice } 
+            });
+        }
+    };
+
+    const handleConfirmProportion = (proportion) => {
+        const numericPrice = parseFloat(item.price);
+        const numericProportionPrice = parseFloat(proportion.price);
+        addToCart({ 
+            ...item, 
+            price: numericPrice,
+            proportion: { ...proportion, price: numericProportionPrice }
+        });
+        setIsDialogOpen(false);
+    };
+    
+    const isPurchasable = item.price != null && !isNaN(parseFloat(item.price));
 
     return (
         <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -62,29 +131,29 @@ const MenuItemCard = ({ item }) => {
                 <Typography variant="body2" color="text.secondary">
                     {item.description}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Availability: {item.availability.join(', ')}
-                </Typography>
             </CardContent>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                {item.proportions.length > 1 ? (
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <InputLabel>Proportion</InputLabel>
-                        <Select value={selectedProportion.name} onChange={handleProportionChange} label="Proportion">
-                            {item.proportions.map(p => (
-                                <MenuItem key={p.name} value={p.name}>
-                                    {p.name} - ₹{p.price.toFixed(2)}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                ) : (
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                        ₹{selectedProportion.price.toFixed(2)}
-                    </Typography>
-                )}
-                <Button variant="contained" onClick={handleAddToCart}>Add to Cart</Button>
+                {isPurchasable ? (
+                     <Typography variant="h6" sx={{ mb: 2 }}>
+                        ₹{parseFloat(item.price).toFixed(2)}
+                     </Typography>
+                ) : null}
+
+                <Button 
+                    variant="contained" 
+                    onClick={handleAddToCartClick}
+                    disabled={!isPurchasable}
+                >
+                    {isPurchasable ? 'Add to Cart' : 'Unavailable'}
+                </Button>
             </Box>
+            
+            <ProportionSelectionDialog
+                open={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                item={item}
+                onAddToCart={handleConfirmProportion}
+            />
         </Card>
     );
 };
