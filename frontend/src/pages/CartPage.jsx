@@ -17,9 +17,10 @@ import {
     Alert
 } from '@mui/material';
 import { Add, Remove, Delete } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 
-const CartPage = () => {
+const CartPage = ({ user }) => {
     const {
         cart,
         updateQuantity,
@@ -33,6 +34,8 @@ const CartPage = () => {
     } = useCart();
 
     const [comment, setComment] = useState('');
+    const navigate = useNavigate();
+    const location = useLocation();
 
     if (orderSuccess) {
         return (
@@ -45,11 +48,28 @@ const CartPage = () => {
             </Container>
         );
     }
+
+    const handleCheckout = () => {
+        if (!user) {
+            // If user is not logged in, redirect to login page,
+            // saving the current location to redirect back to the cart.
+            navigate('/login', { state: { from: location } });
+        } else {
+            placeOrder(comment);
+        }
+    };
     
     const getPrice = (item) => {
         const price = item.proportion?.price ?? item.price;
         const numericPrice = parseFloat(price);
         return isNaN(numericPrice) ? 0 : numericPrice;
+    };
+
+    const renderCheckoutButton = () => {
+        if (isPlacingOrder) {
+            return <CircularProgress size={24} />;
+        }
+        return user ? 'Place Order' : 'Login to Place Order';
     };
 
     return (
@@ -120,12 +140,12 @@ const CartPage = () => {
                             variant="contained" 
                             color="primary" 
                             size="large" 
-                            onClick={() => placeOrder(comment)} // Pass the comment to the placeOrder function
+                            onClick={handleCheckout}
                             disabled={isPlacingOrder}
                         >
-                            {isPlacingOrder ? <CircularProgress size={24} /> : 'Place Order'}
+                            {renderCheckoutButton()}
                         </Button>
-                        {orderError && <Alert severity="error" sx={{ mt: 2 }}>{orderError}</Alert>}
+                        {orderError && user && <Alert severity="error" sx={{ mt: 2 }}>{orderError}</Alert>}
                     </Box>
                 </Paper>
             )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllOrders, updateOrderStatus, cancelOrder } from '../../services/orderService';
 import { getAllUsers } from '../../services/userService';
+import { ORDER_STATUS } from '../../constants/orderStatus'; // Import the constants
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
@@ -78,8 +79,7 @@ const OrderManagement = () => {
   const handleSettleOrder = async () => {
     if (selectedOrderId) {
       try {
-        // Re-using updateOrderStatus for settling, as it's just a status change
-        const updatedOrder = await updateOrderStatus(selectedOrderId, 'Settled');
+        const updatedOrder = await updateOrderStatus(selectedOrderId, ORDER_STATUS.SETTLED);
         setOrders(prevOrders =>
           prevOrders.map(o => (o.id === selectedOrderId ? updatedOrder : o))
         );
@@ -95,14 +95,12 @@ const OrderManagement = () => {
   const handleCancelOrder = async () => {
     if (selectedOrderId) {
       try {
-        // Using the new dedicated cancelOrder service function
         const updatedOrder = await cancelOrder(selectedOrderId);
         setOrders(prevOrders =>
           prevOrders.map(o => (o.id === selectedOrderId ? updatedOrder : o))
         );
       } catch (err) {
         console.error("Failed to cancel order:", err);
-        // The backend provides a specific error message if the window has passed
         alert(err.response?.data?.message || 'Failed to cancel order.');
       } finally {
         handleCloseCancelDialog();
@@ -113,7 +111,6 @@ const OrderManagement = () => {
   const filteredOrders = useMemo(() => {
     return orders
       .filter(order => {
-        // The backend gives us user_id, which we use to look up the email
         const userEmail = users[order.user_id] || '';
         const searchTermLower = searchTerm.toLowerCase();
         return (
@@ -178,25 +175,27 @@ const OrderManagement = () => {
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
                 <TableCell>{users[order.user_id] || 'Unknown User'}</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleString()}</TableCell>
-                {/* The total is now pre-calculated by the backend */}
-                <TableCell>₹{parseFloat(order.total).toFixed(2)}</TableCell>
+                <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
                 <TableCell>
                   <Select
                     value={order.status}
                     onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    disabled={['Delivered', 'Settled', 'Cancelled'].includes(order.status)}
+                    disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)}
                     size="small"
                     sx={{ minWidth: 120 }}
                   >
-                    <MenuItem value="Pending">Pending</MenuItem>
-                    <MenuItem value="Confirmed">Confirmed</MenuItem>
-                    <MenuItem value="Delivered">Delivered</MenuItem>
-                    <MenuItem value="Settled" disabled>Settled</MenuItem>
-                    <MenuItem value="Cancelled" disabled>Cancelled</MenuItem>
+                    {Object.values(ORDER_STATUS).map(status => (
+                        <MenuItem key={status} value={status} 
+                          // Disable terminal statuses in dropdown if not already set
+                          disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status} 
+                        >
+                            {status}
+                        </MenuItem>
+                    ))}
                   </Select>
                 </TableCell>
                 <TableCell align="right">
-                  {order.status === 'Pending' && (
+                  {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED].includes(order.status) && (
                       <Button
                         variant="contained"
                         color="error"
@@ -210,9 +209,9 @@ const OrderManagement = () => {
                     variant="contained"
                     color="success"
                     size="small"
-                    sx={{ ml: 1}} // Add margin left for spacing
+                    sx={{ ml: 1}}
                     onClick={() => handleOpenSettleDialog(order.id)}
-                    disabled={order.status !== 'Delivered'}
+                    disabled={order.status !== ORDER_STATUS.DELIVERED}
                   >
                     Settle
                   </Button>
@@ -223,10 +222,7 @@ const OrderManagement = () => {
         </Table>
       </TableContainer>
 
-      <Dialog
-        open={openSettleDialog}
-        onClose={handleCloseSettleDialog}
-      >
+      <Dialog open={openSettleDialog} onClose={handleCloseSettleDialog}>
         <DialogTitle>Settle Order Bill?</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -235,16 +231,11 @@ const OrderManagement = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseSettleDialog}>Cancel</Button>
-          <Button onClick={handleSettleOrder} color="primary" autoFocus>
-            Confirm Settle
-          </Button>
+          <Button onClick={handleSettleOrder} color="primary" autoFocus>Confirm Settle</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={openCancelDialog}
-        onClose={handleCloseCancelDialog}
-      >
+      <Dialog open={openCancelDialog} onClose={handleCloseCancelDialog}>
         <DialogTitle>Cancel Order?</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -253,9 +244,7 @@ const OrderManagement = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseCancelDialog}>Back</Button>
-          <Button onClick={handleCancelOrder} color="error" autoFocus>
-            Confirm Cancel
-          </Button>
+          <Button onClick={handleCancelOrder} color="error" autoFocus>Confirm Cancel</Button>
         </DialogActions>
       </Dialog>
     </Paper>

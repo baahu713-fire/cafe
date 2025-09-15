@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -8,31 +8,34 @@ import {
   TextField,
   Button,
   Grid,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { useCart } from '../hooks/useCart'; // Import the useCart hook
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
   const navigate = useNavigate();
-  const { cart } = useCart(); // Get the cart from the context
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+    setLoading(true);
 
-    const success = onLogin(email, password);
+    const result = await onLogin(email, password);
 
-    if (success) {
-      if (cart.length > 0) {
-        navigate('/cart'); // Redirect to cart if it's not empty
-      } else {
-        navigate('/'); // Otherwise, redirect to home/menu page
-      }
+    setLoading(false);
+
+    if (result.success) {
+      // Redirect to the page the user came from, or to the home page.
+      navigate(from, { replace: true });
     } else {
-      setError('Invalid email or password. Please try again.');
+      setError(result.message || 'Invalid email or password. Please try again.');
     }
   };
 
@@ -68,6 +71,7 @@ const LoginPage = ({ onLogin }) => {
             autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
           />
           <TextField
             margin="normal"
@@ -80,16 +84,32 @@ const LoginPage = ({ onLogin }) => {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
           />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            size="large"
-            sx={{ mt: 3, mb: 2, borderRadius: '20px', fontWeight: 'bold' }}
-          >
-            Sign In
-          </Button>
+          <Box sx={{ position: 'relative', mt: 3, mb: 2 }}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ borderRadius: '20px', fontWeight: 'bold' }}
+            >
+              Sign In
+            </Button>
+            {loading && (
+              <CircularProgress
+                size={24}
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  marginTop: '-12px',
+                  marginLeft: '-12px',
+                }}
+              />
+            )}
+          </Box>
           <Grid container justifyContent="flex-end">
             <Grid item>
               <Link to="/register" variant="body2">

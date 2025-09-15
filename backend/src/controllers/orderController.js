@@ -1,8 +1,8 @@
 const orderService = require('../services/orderService');
+const ORDER_STATUS = require('../constants/orderStatus');
 
 const createOrder = async (req, res) => {
   try {
-    // The user's ID is attached to the request by the authMiddleware
     const userId = req.user.userId;
     const order = await orderService.createOrder(req.body, userId);
     res.status(201).json(order);
@@ -11,9 +11,27 @@ const createOrder = async (req, res) => {
   }
 };
 
+const getAllOrders = async (req, res) => {
+    try {
+        const orders = await orderService.getAllOrders();
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to retrieve all orders.' });
+    }
+};
+
+const getMyOrders = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const orders = await orderService.getOrdersByUserId(userId);
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message || 'Failed to retrieve orders.' });
+  }
+};
+
 const getOrderById = async (req, res) => {
   try {
-    // Pass the entire user object from the token for role-based access checks
     const user = req.user;
     const order = await orderService.getOrderById(req.params.id, user);
     res.json(order);
@@ -25,8 +43,8 @@ const getOrderById = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!status) {
-        return res.status(400).json({ message: 'Status is required.' });
+    if (!status || !Object.values(ORDER_STATUS).includes(status)) {
+        return res.status(400).json({ message: 'Invalid or missing status.' });
     }
     const updatedOrder = await orderService.updateOrderStatus(req.params.id, status);
     res.json(updatedOrder);
@@ -38,8 +56,59 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const cancelMyOrder = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const userId = req.user.userId;
+        const updatedOrder = await orderService.cancelOrder(orderId, userId);
+        res.json(updatedOrder);
+    } catch (error) {
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        if (error.message.includes('not allowed')) {
+            return res.status(403).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const addFeedback = async (req, res) => {
+    const { orderId } = req.params;
+    const userId = req.user.userId;
+    const { rating, comment } = req.body;
+
+    const numericRating = Number(rating);
+
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      console.log(rating);
+      console.log(numericRating);
+        return res.status(400).json({ message: 'Rating is required and must be a number between 1 and 5.' });
+    }
+
+    try {
+        const feedback = await orderService.addFeedbackToOrder(orderId, userId, numericRating, comment);
+        res.status(201).json(feedback);
+    } catch (error) {
+        let statusCode = 500;
+        if (error.message.includes('not found') || error.message.includes('not authorized')) {
+            statusCode = 404;
+        } else if (error.message.includes('already been submitted')) {
+            statusCode = 409; 
+        } else if (error.message.includes('can only be added to delivered')) {
+            statusCode = 400;
+        }
+
+        res.status(statusCode).json({ message: error.message || 'Failed to submit feedback.' });
+    }
+};
+
 module.exports = {
   createOrder,
+  getAllOrders,
+  getMyOrders,
   getOrderById,
   updateOrderStatus,
+  cancelMyOrder,
+  addFeedback,
 };

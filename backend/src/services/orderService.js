@@ -1,51 +1,76 @@
 const db = require('../config/database');
+const ORDER_STATUS = require('../constants/orderStatus');
+
+// A helper to format order data consistently
+const parseOrder = (order) => {
+    if (!order) return null;
+    
+    // The items from the DB will be a JSON array, which node-postgres parses automatically.
+    // We ensure it defaults to an empty array if null.
+    const items = order.items || [];
+
+    // Filter out any null values that can result from a LEFT JOIN with no matching items.
+    const cleanedItems = items.filter(item => item !== null && item.id !== null);
+
+    return {
+        ...order,
+        total_price: order.total_price ? parseFloat(order.total_price) : 0,
+        items: cleanedItems,
+        // The feedback subquery returns null if no feedback exists.
+        feedback: order.feedback || null,
+    };
+};
 
 const createOrder = async (orderData, userId) => {
-    const { items, delivery_address } = orderData;
+    const { items, comment } = orderData;
     let totalOrderPrice = 0;
     const createdOrderItems = [];
 
-    // Use a database transaction to ensure atomicity
-    const client = await db.connect();
+    const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
 
-        // Step 1: Fetch all required menu items at once to validate and get details
-        const itemIds = items.map(item => item.menu_item_id);
-        const { rows: menuItems } = await client.query('SELECT * FROM menu_items WHERE id = ANY($1::int[]) AND available = TRUE AND deleted_from IS NULL', [itemIds]);
+        const uniqueItemIds = [...new Set(items.map(item => item.menu_item_id))];
+        const { rows: menuItems } = await client.query(
+            'SELECT * FROM menu_items WHERE id = ANY($1::int[]) AND available = TRUE AND deleted_from IS NULL',
+            [uniqueItemIds]
+        );
 
-        if (menuItems.length !== itemIds.length) {
+        if (menuItems.length !== uniqueItemIds.length) {
             throw new Error('One or more menu items are invalid, unavailable, or could not be found.');
         }
 
         const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
 
-        // Step 2: Process each item, calculate its price, and prepare for insertion
         for (const item of items) {
             const menuItem = menuItemMap.get(item.menu_item_id);
-            let priceAtOrder = menuItem.price;
+            if (!menuItem) {
+                throw new Error(`Menu item with ID ${item.menu_item_id} could not be found.`);
+            }
+
+            let priceAtOrder;
             let nameAtOrder = menuItem.name;
 
-            // Handle proportions if specified
             if (item.proportion_name) {
-                if (!menuItem.proportions || !menuItem.proportions[item.proportion_name]) {
+                const selectedProportion = (menuItem.proportions || []).find(p => p.name === item.proportion_name);
+                if (!selectedProportion) {
                     throw new Error(`Proportion '${item.proportion_name}' is not available for menu item '${menuItem.name}'.`);
                 }
-                priceAtOrder = menuItem.proportions[item.proportion_name];
+                priceAtOrder = selectedProportion.price;
                 nameAtOrder = `${menuItem.name} (${item.proportion_name})`;
+            } else {
+                priceAtOrder = menuItem.price;
             }
 
             totalOrderPrice += priceAtOrder * item.quantity;
             createdOrderItems.push({ ...item, price_at_order: priceAtOrder, name_at_order: nameAtOrder });
         }
 
-        // Step 3: Insert the main order record
         const { rows: [order] } = await client.query(
-            'INSERT INTO orders (user_id, total_price, delivery_address, status) VALUES ($1, $2, $3, $4) RETURNING id, created_at, status',
-            [userId, totalOrderPrice, delivery_address, 'Pending']
+            'INSERT INTO orders (user_id, total_price, status, comment) VALUES ($1, $2, $3, $4) RETURNING id, created_at, status, comment',
+            [userId, totalOrderPrice, ORDER_STATUS.PENDING, comment]
         );
 
-        // Step 4: Insert all order items
         const orderItemsQueries = createdOrderItems.map(item => {
             return client.query(
                 'INSERT INTO order_items (order_id, menu_item_id, proportion_name, quantity, price_at_order, name_at_order) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -54,7 +79,6 @@ const createOrder = async (orderData, userId) => {
         });
 
         await Promise.all(orderItemsQueries);
-
         await client.query('COMMIT');
 
         return { ...order, total_price: totalOrderPrice, items: createdOrderItems };
@@ -68,28 +92,85 @@ const createOrder = async (orderData, userId) => {
 };
 
 const getOrderById = async (orderId, user) => {
-    // Users can only access their own orders. Admins can access any.
-    let query = 'SELECT * FROM orders WHERE id = $1';
     const params = [orderId];
-
+    let userClause = '';
     if (user.role !== 'admin') {
-        query += ' AND user_id = $2';
+        userClause = 'AND o.user_id = $2';
         params.push(user.userId);
     }
 
+    const query = `
+        SELECT 
+            o.*,
+            COALESCE(
+                (
+                    SELECT json_agg(oi.*)
+                    FROM order_items oi WHERE oi.order_id = o.id
+                ), '[]'::json
+            ) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        WHERE o.id = $1 ${userClause}
+    `;
+
     const { rows: [order] } = await db.query(query, params);
+    
     if (!order) {
         throw new Error('Order not found or access denied.');
     }
 
-    // Fetch the associated order items
-    const { rows: items } = await db.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
+    return parseOrder(order);
+};
 
-    return { ...order, items };
+const getOrdersByUserId = async (userId) => {
+    const query = `
+        SELECT 
+            o.*,
+            COALESCE((
+                SELECT json_agg(oi.*) 
+                FROM order_items oi WHERE oi.order_id = o.id
+            ), '[]'::json) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        WHERE o.user_id = $1
+        ORDER BY o.created_at DESC;
+    `;
+    const { rows } = await db.query(query, [userId]);
+    return rows.map(parseOrder);
+};
+
+const getAllOrders = async () => {
+    const query = `
+        SELECT 
+            o.*, 
+            COALESCE((
+                SELECT json_agg(oi.*) 
+                FROM order_items oi WHERE oi.order_id = o.id
+            ), '[]'::json) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        ORDER BY o.created_at DESC;
+    `;
+    const { rows } = await db.query(query);
+    return rows.map(parseOrder);
 };
 
 const updateOrderStatus = async (orderId, status) => {
-    // This should be restricted to admins
+    if (!Object.values(ORDER_STATUS).includes(status)) {
+        throw new Error(`Invalid status: ${status}`);
+    }
     const { rows: [updatedOrder] } = await db.query(
         'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
         [status, orderId]
@@ -97,11 +178,65 @@ const updateOrderStatus = async (orderId, status) => {
     if (!updatedOrder) {
         throw new Error('Order not found.');
     }
-    return updatedOrder;
+    return parseOrder(updatedOrder);
+};
+
+const cancelOrder = async (orderId, userId, role) => {
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+
+    if (!order) {
+        throw new Error('Order not found.');
+    }
+
+    if (role !== 'admin' && order.user_id !== userId) {
+        throw new Error('You are not authorized to cancel this order.');
+    }
+
+    if (role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
+        throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
+    }
+
+    const { rows: [updatedOrder] } = await db.query(
+        'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+        [ORDER_STATUS.CANCELLED, orderId]
+    );
+
+    return parseOrder(updatedOrder);
+};
+
+const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
+    if (rating === undefined || rating === null || rating === 0) {
+        throw new Error('Rating is required.');
+    }
+    
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
+
+    if (!order) {
+        throw new Error('Order not found or you are not authorized to add feedback.');
+    }
+
+    if (order.status !== ORDER_STATUS.DELIVERED && order.status !== ORDER_STATUS.SETTLED) {
+        throw new Error('Feedback can only be added to delivered or settled orders.');
+    }
+
+    const { rows: [existingFeedback] } = await db.query('SELECT * FROM feedback WHERE order_id = $1', [orderId]);
+    if (existingFeedback) {
+        throw new Error('Feedback has already been submitted for this order.');
+    }
+
+    const { rows: [newFeedback] } = await db.query(
+        'INSERT INTO feedback (order_id, rating, comment) VALUES ($1, $2, $3) RETURNING *',
+        [orderId, rating, comment]
+    );
+    return newFeedback;
 };
 
 module.exports = {
     createOrder,
     getOrderById,
+    getOrdersByUserId,
+    getAllOrders,
     updateOrderStatus,
+    cancelOrder,
+    addFeedbackToOrder,
 };
