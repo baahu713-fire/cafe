@@ -5,6 +5,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const teamRoutes = require('./src/routes/teamRoutes');
 const menuRoutes = require('./src/routes/menuRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
+const userRoutes = require('./src/routes/userRoutes'); // Import user routes
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes); // Use user routes
 
 // Basic error handling middleware
 app.use((err, req, res, next) => {

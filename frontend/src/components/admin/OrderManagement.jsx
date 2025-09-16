@@ -25,7 +25,7 @@ const OrderManagement = () => {
         getAllOrders(),
         getAllUsers(),
       ]);
-      setOrders(ordersData);
+      setOrders(ordersData.orders);
       const usersMap = usersData.reduce((acc, user) => {
         acc[user.id] = user.email;
         return acc;

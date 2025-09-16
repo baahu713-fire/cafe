@@ -5,18 +5,13 @@ const ORDER_STATUS = require('../constants/orderStatus');
 const parseOrder = (order) => {
     if (!order) return null;
     
-    // The items from the DB will be a JSON array, which node-postgres parses automatically.
-    // We ensure it defaults to an empty array if null.
     const items = order.items || [];
-
-    // Filter out any null values that can result from a LEFT JOIN with no matching items.
     const cleanedItems = items.filter(item => item !== null && item.id !== null);
 
     return {
         ...order,
         total_price: order.total_price ? parseFloat(order.total_price) : 0,
         items: cleanedItems,
-        // The feedback subquery returns null if no feedback exists.
         feedback: order.feedback || null,
     };
 };
@@ -126,8 +121,14 @@ const getOrderById = async (orderId, user) => {
     return parseOrder(order);
 };
 
-const getOrdersByUserId = async (userId) => {
-    const query = `
+const getOrdersByUserId = async (userId, page, limit) => {
+    const offset = (page - 1) * limit;
+
+    const totalQuery = 'SELECT COUNT(*) FROM orders WHERE user_id = $1';
+    const totalResult = await db.query(totalQuery, [userId]);
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const ordersQuery = `
         SELECT 
             o.*,
             COALESCE((
@@ -141,14 +142,22 @@ const getOrdersByUserId = async (userId) => {
             ) as feedback
         FROM orders o
         WHERE o.user_id = $1
-        ORDER BY o.created_at DESC;
+        ORDER BY o.created_at DESC
+        LIMIT $2 OFFSET $3;
     `;
-    const { rows } = await db.query(query, [userId]);
-    return rows.map(parseOrder);
+    const { rows: orders } = await db.query(ordersQuery, [userId, limit, offset]);
+
+    return { orders: orders.map(parseOrder), total };
 };
 
-const getAllOrders = async () => {
-    const query = `
+const getAllOrders = async (page, limit) => {
+    const offset = (page - 1) * limit;
+
+    const totalQuery = 'SELECT COUNT(*) FROM orders';
+    const totalResult = await db.query(totalQuery);
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const ordersQuery = `
         SELECT 
             o.*, 
             COALESCE((
@@ -161,10 +170,12 @@ const getAllOrders = async () => {
                 LIMIT 1
             ) as feedback
         FROM orders o
-        ORDER BY o.created_at DESC;
+        ORDER BY o.created_at DESC
+        LIMIT $1 OFFSET $2;
     `;
-    const { rows } = await db.query(query);
-    return rows.map(parseOrder);
+    const { rows: orders } = await db.query(ordersQuery, [limit, offset]);
+
+    return { orders: orders.map(parseOrder), total };
 };
 
 const updateOrderStatus = async (orderId, status) => {

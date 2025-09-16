@@ -3,20 +3,36 @@ import api from './api';
 // Helper to adapt a single order from backend to frontend format
 const adaptOrderToFrontend = (order) => ({
     ...order,
-    items: order.order_items || [],
+    items: order.items || [],
 });
 
 // Helper to adapt multiple orders
 const adaptOrdersToFrontend = (orders) => orders.map(adaptOrderToFrontend);
 
-export const getMyOrders = async () => {
-    const response = await api.get('/orders/my-orders');
-    return adaptOrdersToFrontend(response.data);
+export const placeOrder = async (orderData) => {
+    const response = await api.post('/orders', orderData);
+    return adaptOrderToFrontend(response.data);
 };
 
-export const getAllOrders = async () => {
-    const response = await api.get('/orders');
-    return adaptOrdersToFrontend(response.data);
+export const getMyOrders = async (page = 1, limit = 5) => {
+    const response = await api.get('/orders/my-orders', {
+        params: { page, limit }
+    });
+    // Assuming backend returns { orders: [...], total: ... }
+    return {
+        orders: adaptOrdersToFrontend(response.data.orders),
+        total: response.data.total,
+    };
+};
+
+export const getAllOrders = async (page = 1, limit = 10) => {
+    const response = await api.get('/orders', {
+        params: { page, limit }
+    });
+    return {
+        orders: adaptOrdersToFrontend(response.data.orders),
+        total: response.data.total,
+    };
 };
 
 export const updateOrderStatus = async (orderId, newStatus) => {
@@ -29,12 +45,7 @@ export const settleAllUserOrders = async (userId) => {
     return response.data;
 };
 
-export const placeOrder = async (orderData) => {
-    const response = await api.post('/orders', orderData);
-    return adaptOrderToFrontend(response.data);
-};
-
 export const cancelOrder = async (orderId) => {
-    const response = await api.patch(`/orders/${orderId}/cancel`, {});
+    const response = await api.post(`/orders/${orderId}/cancel`);
     return adaptOrderToFrontend(response.data);
 };

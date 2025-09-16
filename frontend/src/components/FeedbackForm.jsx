@@ -24,7 +24,7 @@ const FeedbackForm = ({ orderId, onSubmit }) => {
         setLoading(true);
         setError(null);
 
-        console.log('FeedbackForm: Submitting with', { orderId, rating, comment });
+        // console.log('FeedbackForm: Submitting with', { orderId, rating, comment });
 
         try {
             await onSubmit(orderId, rating, comment);

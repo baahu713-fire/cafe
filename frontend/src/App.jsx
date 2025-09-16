@@ -17,7 +17,7 @@ import CartPage from './pages/CartPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
-import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
+import MyOrdersPage from './pages/MyOrdersPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
 // Import the new auth service methods
 import { login, register, logout, getCurrentUser } from './services/authService.js';
@@ -110,7 +110,8 @@ const AppContent = ({ user, onLogout, onLogin, onRegister }) => {
         />
         <Route 
           path="/orders" 
-          element={user ? <OrderHistoryPage user={user} /> : <Navigate to="/login" />} 
+          // element={user ? <OrderHistoryPage user={user} /> : <Navigate to="/login" />} 
+          element={user ? <MyOrdersPage user={user} /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/favorites" 

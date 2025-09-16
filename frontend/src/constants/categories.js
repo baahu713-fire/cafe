@@ -8,10 +8,10 @@ export const CATEGORIES = [
 ];
 
 export const AVAILABILITY_OPTIONS = [
+    'All',
     'Breakfast',
     'Lunch',
     'Dinner',
-    'All Day',
     'Snacks',
     'Beverages',
 ];

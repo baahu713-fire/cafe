@@ -12,9 +12,12 @@ const createOrder = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+
     try {
-        const orders = await orderService.getAllOrders();
-        res.json(orders);
+        const result = await orderService.getAllOrders(page, limit);
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message || 'Failed to retrieve all orders.' });
     }
@@ -23,8 +26,10 @@ const getAllOrders = async (req, res) => {
 const getMyOrders = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const orders = await orderService.getOrdersByUserId(userId);
-    res.json(orders);
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 5; 
+    const result = await orderService.getOrdersByUserId(userId, page, limit);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message || 'Failed to retrieve orders.' });
   }
@@ -61,6 +66,22 @@ const cancelMyOrder = async (req, res) => {
         const orderId = req.params.id;
         const userId = req.user.userId;
         const updatedOrder = await orderService.cancelOrder(orderId, userId);
+        res.json(updatedOrder);
+    } catch (error) {
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        if (error.message.includes('not allowed')) {
+            return res.status(403).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const cancelOrderAdmin = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const updatedOrder = await orderService.cancelOrder(orderId);
         res.json(updatedOrder);
     } catch (error) {
         if (error.message.includes('not found')) {
@@ -110,5 +131,6 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   cancelMyOrder,
+  cancelOrderAdmin,
   addFeedback,
 };
