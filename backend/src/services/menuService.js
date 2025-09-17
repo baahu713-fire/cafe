@@ -18,7 +18,7 @@ const createMenuItem = async (itemData) => {
     const { name, description, price, image, availability, proportions, available } = itemData;
     const { rows } = await db.query(
         'INSERT INTO menu_items (name, description, price, image, availability, proportions, available) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [name, description, price, image, availability, proportions, available]
+        [name, description, price, image, availability, JSON.stringify(proportions), available]
     );
     return rows[0];
 };
@@ -35,7 +35,7 @@ const updateMenuItem = async (itemId, itemData) => {
             proportions = $6, 
             available = $7
         WHERE id = $8 AND deleted_from IS NULL RETURNING *`,
-        [name, description, price, image, availability, proportions, available, itemId]
+        [name, description, price, image, availability, JSON.stringify(proportions), available, itemId]
     );
     if (rows.length === 0) {
         throw new Error('Menu item not found or has been deleted');

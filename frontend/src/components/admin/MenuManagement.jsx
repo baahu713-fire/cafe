@@ -19,17 +19,11 @@ import {
   TextField,
   IconButton,
   Typography,
-  DialogContentText,
-  FormControl,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  FormLabel
+  DialogContentText
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import { AVAILABILITY_OPTIONS } from '../../constants/categories';
+import ItemForm from './ItemForm';
 
 const MenuManagement = ({ user }) => {
     const {
@@ -62,7 +56,7 @@ const MenuManagement = ({ user }) => {
             const itemToEdit = JSON.parse(JSON.stringify(item));
             const initialProportions = itemToEdit.proportions && itemToEdit.proportions.length > 0 
                 ? itemToEdit.proportions 
-                : [{ name: 'Full', price: itemToEdit.price || '' }];
+                : [];
 
             let initialAvailability = [];
             if (Array.isArray(itemToEdit.availability)) {
@@ -73,7 +67,7 @@ const MenuManagement = ({ user }) => {
 
             setCurrentItem({ ...itemToEdit, proportions: initialProportions, availability: initialAvailability });
         } else {
-            setCurrentItem({ name: '', price: '', image: '', description: '', availability: [], proportions: [{ name: 'Full', price: '' }] });
+            setCurrentItem({ name: '', price: '', image: '', description: '', availability: [], proportions: [], available: true });
         }
         setFormOpen(true);
     };
@@ -85,14 +79,19 @@ const MenuManagement = ({ user }) => {
     };
 
     const handleSave = async () => {
-        if (!currentItem || !currentItem.name) {
-            setFormError('Item name is required.');
+        if (!currentItem || !currentItem.name || !currentItem.price) {
+            setFormError('Item name and price are required.');
             return;
         }
-        
-        const hasInvalidProportion = currentItem.proportions.some(p => !p.name || p.price === '' || isNaN(parseFloat(p.price)));
-        if (!currentItem.proportions || hasInvalidProportion) {
-            setFormError('All proportions must have a name and a valid price.');
+
+        if (isNaN(parseFloat(currentItem.price)) || parseFloat(currentItem.price) < 0) {
+            setFormError('Price must be a valid, non-negative number.');
+            return;
+        }
+
+        const hasInvalidProportion = currentItem.proportions.some(p => !p.name || p.price === '' || isNaN(parseFloat(p.price)) || parseFloat(p.price) < 0);
+        if (currentItem.proportions && hasInvalidProportion) {
+            setFormError('All proportions must have a name and a valid, non-negative price.');
             return;
         }
 
@@ -104,7 +103,7 @@ const MenuManagement = ({ user }) => {
 
             const itemToSave = {
                 ...currentItem,
-                price: proportionsWithNumericPrices[0]?.price || 0,
+                price: parseFloat(currentItem.price),
                 proportions: proportionsWithNumericPrices
             };
 
@@ -141,38 +140,6 @@ const MenuManagement = ({ user }) => {
         setItemToDelete(null);
     };
 
-    const handleChange = (e) => {
-        setCurrentItem({ ...currentItem, [e.target.name]: e.target.value });
-    };
-    
-    const handleAvailabilityChange = (e) => {
-        const { name, checked } = e.target;
-        setCurrentItem(prev => {
-            const currentAvailability = prev.availability || [];
-            const newAvailability = checked 
-                ? [...currentAvailability, name]
-                : currentAvailability.filter(item => item !== name);
-            return { ...prev, availability: newAvailability };
-        });
-    };
-
-    const handleProportionChange = (index, field, value) => {
-        const newProportions = currentItem.proportions.map((p, i) => i === index ? { ...p, [field]: value } : p);
-        setCurrentItem({ ...currentItem, proportions: newProportions });
-    };
-
-    const addProportion = () => {
-        const newProportions = [...currentItem.proportions, { name: '', price: '' }];
-        setCurrentItem({ ...currentItem, proportions: newProportions });
-    };
-
-    const removeProportion = (index) => {
-        if (currentItem.proportions.length > 1) {
-            const newProportions = currentItem.proportions.filter((_, i) => i !== index);
-            setCurrentItem({ ...currentItem, proportions: newProportions });
-        }
-    };
-
     const filteredMenu = useMemo(() => {
         if (!menuItems) return [];
         return menuItems.filter(item => 
@@ -200,11 +167,12 @@ const MenuManagement = ({ user }) => {
             />
             <TableContainer component={Paper} sx={{ borderRadius: '16px' }}>
                 <Table>
-                    <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Availability</TableCell><TableCell>Description</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
+                    <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Description</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
                     <TableBody>
                         {filteredMenu.map(item => (
                             <TableRow key={item.id}> 
                                 <TableCell>{item.name}</TableCell>
+                                <TableCell>₹{item.price}</TableCell>
                                 <TableCell>{Array.isArray(item.availability) ? item.availability.join(', ') : (item.availability || 'N/A')}</TableCell>
                                 <TableCell>{item.description || 'N/A'}</TableCell>
                                 <TableCell>
@@ -216,40 +184,16 @@ const MenuManagement = ({ user }) => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            <Dialog open={formOpen} onClose={handleFormClose} fullWidth maxWidth="sm">
-                <DialogTitle>{currentItem?.id ? 'Edit Menu Item' : 'Add New Menu Item'}</DialogTitle>
-                <DialogContent>
-                    {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
-                    <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} required/>
-                    <TextField margin="dense" name="image" label="Image URL" type="text" fullWidth variant="outlined" value={currentItem?.image || ''} onChange={handleChange} />
-                    <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} />
-                    <FormControl component="fieldset" fullWidth margin="dense">
-                        <FormLabel component="legend">Availability</FormLabel>
-                        <FormGroup row>
-                            {AVAILABILITY_OPTIONS.map(option => (
-                                <FormControlLabel
-                                    key={option}
-                                    control={<Checkbox checked={currentItem?.availability?.includes(option) ?? false} onChange={handleAvailabilityChange} name={option} />}
-                                    label={option}
-                                />
-                            ))}
-                        </FormGroup>
-                    </FormControl>
-                    <Typography sx={{ mt: 2, mb: 1 }}>Proportions</Typography>
-                    {currentItem?.proportions?.map((proportion, index) => (
-                        <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                            <TextField label="Proportion Name" value={proportion.name} onChange={(e) => handleProportionChange(index, 'name', e.target.value)} required />
-                            <TextField label="Price" type="number" value={proportion.price} onChange={(e) => handleProportionChange(index, 'price', e.target.value)} required />
-                            <IconButton onClick={() => removeProportion(index)} disabled={currentItem.proportions.length <= 1}><DeleteIcon /></IconButton>
-                        </Box>
-                    ))}
-                    <Button startIcon={<AddIcon />} onClick={addProportion}>Add Proportion</Button>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleFormClose}>Cancel</Button>
-                    <Button onClick={handleSave} variant="contained">Save</Button>
-                </DialogActions>
-            </Dialog>
+            {formOpen && (
+                <ItemForm 
+                    open={formOpen} 
+                    handleClose={handleFormClose} 
+                    currentItem={currentItem} 
+                    setCurrentItem={setCurrentItem} 
+                    handleSave={handleSave} 
+                    formError={formError} 
+                />
+            )}
             <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>

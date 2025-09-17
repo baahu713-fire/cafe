@@ -29,7 +29,7 @@ const MenuPage = () => {
     const filteredMenu = menuItems.filter(item => {
         const matchesSearchTerm = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                   (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesCategory = categoryFilter === 'All' || (item.category && item.category === categoryFilter);
+        const matchesCategory = categoryFilter === 'All' || (item.availability && item.availability.includes(categoryFilter));
         return matchesSearchTerm && matchesCategory;
     });
 

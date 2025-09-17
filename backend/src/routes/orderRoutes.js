@@ -21,14 +21,14 @@ router.get('/:id', orderController.getOrderById);
 // PATCH /api/orders/:id/status - Update the status of any order (admin only)
 router.patch('/:id/status', admin, orderController.updateOrderStatus);
 
-// POST /api/orders/:id/cancel - Cancel a specific order (user-specific, service logic will check ownership)
-router.post('/:id/cancel', orderController.cancelMyOrder);
-
-// POST /api/orders/:id/cancel-admin - Cancel a specific order (admin only)
-router.post('/:id/cancel-admin', admin, orderController.cancelOrderAdmin);
+// POST /api/orders/:id/cancel - Cancel an order (handles both user and admin logic)
+router.post('/:id/cancel', orderController.cancelOrder);
 
 // POST /api/orders/:orderId/feedback - Submit feedback for an order (user)
 router.post('/:orderId/feedback', orderController.addFeedback);
+
+// POST /api/orders/settle-user/:userId - Settle all delivered orders for a specific user (admin only)
+router.post('/settle-user/:userId', admin, orderController.settleUserOrders);
 
 
 module.exports = router;

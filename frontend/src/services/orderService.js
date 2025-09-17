@@ -41,7 +41,7 @@ export const updateOrderStatus = async (orderId, newStatus) => {
 };
 
 export const settleAllUserOrders = async (userId) => {
-    const response = await api.post(`/users/${userId}/settle`, {});
+    const response = await api.post(`/orders/settle-user/${userId}`, {});
     return response.data;
 };
 

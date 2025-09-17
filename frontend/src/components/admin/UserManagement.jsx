@@ -1,55 +1,47 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getAllUsers } from '../../services/userService';
-import { getAllOrders, settleAllUserOrders } from '../../services/orderService';
+import { settleAllUserOrders } from '../../services/orderService';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
-  Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
+  Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, 
+  DialogContentText, DialogTitle, TablePagination, TextField
 } from '@mui/material';
+import { debounce } from 'lodash';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openSettleDialog, setOpenSettleDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchData = async () => {
+  const fetchUsers = async (search = '') => {
     try {
       setLoading(true);
-      const [usersData, ordersData] = await Promise.all([
-        getAllUsers(),
-        getAllOrders(),
-      ]);
-      setUsers(usersData);
-      setOrders(ordersData);
+      const { users: fetchedUsers, total } = await getAllUsers(page + 1, rowsPerPage, search);
+      setUsers(fetchedUsers);
+      setTotalUsers(total);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch data. Please try again later.');
+      setError('Failed to fetch users. Please try again later.');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const debouncedFetchUsers = useCallback(debounce(fetchUsers, 300), [page, rowsPerPage]);
+
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const userOrderStats = useMemo(() => {
-    if (!users.length || !orders.length) return {};
-
-    const stats = {};
-    users.forEach(user => {
-      const userOrders = orders.filter(o => o.user_id === user.id);
-      stats[user.id] = {
-        delivered: userOrders.filter(o => o.status === 'Delivered').length,
-        settled: userOrders.filter(o => o.status === 'Settled').length,
-      };
-    });
-    return stats;
-  }, [users, orders]);
+    debouncedFetchUsers(searchTerm);
+    return () => {
+      debouncedFetchUsers.cancel();
+    };
+  }, [searchTerm, debouncedFetchUsers]);
 
   const handleOpenSettleDialog = (userId) => {
     setSelectedUserId(userId);
@@ -64,10 +56,8 @@ const UserManagement = () => {
   const handleSettleAll = async () => {
     if (selectedUserId) {
       try {
-        // Use the new service function to settle all orders for the user
         await settleAllUserOrders(selectedUserId);
-        // Refetch all data to get the latest status
-        await fetchData();
+        await fetchUsers(searchTerm); // Refetch users to update the data
       } catch (err) {
         console.error("Failed to settle user's orders:", err);
         alert(err.response?.data?.message || err.message);
@@ -77,11 +67,19 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = useMemo(() => {
-      return users.filter(user => 
-          user.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-  }, [users, searchTerm]);
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+    setPage(0);
+  };
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>;
@@ -94,37 +92,38 @@ const UserManagement = () => {
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h5" gutterBottom>Manage User Settlements</Typography>
-      <TextField 
-          label="Search by Email"
-          variant="outlined"
+      <Box sx={{ mb: 2 }}>
+        <TextField
           fullWidth
+          label="Search by email"
+          variant="outlined"
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          sx={{ mb: 2 }}
-      />
+          onChange={handleSearchChange}
+        />
+      </Box>
       <TableContainer>
         <Table stickyHeader aria-label="user management table">
           <TableHead>
             <TableRow>
               <TableCell>User Email</TableCell>
               <TableCell>Delivered Orders</TableCell>
-              <TableCell>Settled Orders</TableCell>
+              <TableCell>Total Order Value</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {users.map((user) => (
               <TableRow hover key={user.id}>
                 <TableCell component="th" scope="row">{user.email}</TableCell>
-                <TableCell>{userOrderStats[user.id]?.delivered || 0}</TableCell>
-                <TableCell>{userOrderStats[user.id]?.settled || 0}</TableCell>
+                <TableCell>{user.order_count}</TableCell>
+                <TableCell>₹{parseFloat(user.total_order_price || 0).toFixed(2)}</TableCell>
                 <TableCell align="right">
                   <Button
                     variant="contained"
                     color="primary"
                     size="small"
                     onClick={() => handleOpenSettleDialog(user.id)}
-                    disabled={userOrderStats[user.id]?.delivered === 0}
+                    disabled={user.order_count === 0}
                   >
                     Settle All
                   </Button>
@@ -134,6 +133,16 @@ const UserManagement = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={totalUsers}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
 
       <Dialog
         open={openSettleDialog}

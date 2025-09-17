@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllUsers } from '../services/authService';
+import { getAllUsers } from '../services/userService';
 import {
   Paper,
   Typography,
@@ -22,7 +22,7 @@ const UserList = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const usersData = getAllUsers();
+        const { users: usersData } = await getAllUsers(1, 100); // Fetch up to 100 users for this list
         setUsers(usersData);
       } catch (err) {
         setError('Failed to load users. Please try again later.');

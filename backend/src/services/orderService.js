@@ -192,19 +192,26 @@ const updateOrderStatus = async (orderId, status) => {
     return parseOrder(updatedOrder);
 };
 
-const cancelOrder = async (orderId, userId, role) => {
+const cancelOrder = async (orderId, user) => {
     const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
 
     if (!order) {
         throw new Error('Order not found.');
     }
 
-    if (role !== 'admin' && order.user_id !== userId) {
+    // Admins can cancel any order, otherwise, the user must own the order.
+    if (user.role !== 'admin' && order.user_id !== user.userId) {
         throw new Error('You are not authorized to cancel this order.');
     }
 
-    if (role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
+    // Regular users can only cancel orders that are PENDING.
+    if (user.role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
         throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
+    }
+
+    // Nobody can cancel an order that is already settled or cancelled.
+    if ([ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)) {
+         throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
     }
 
     const { rows: [updatedOrder] } = await db.query(
@@ -214,6 +221,7 @@ const cancelOrder = async (orderId, userId, role) => {
 
     return parseOrder(updatedOrder);
 };
+
 
 const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
     if (rating === undefined || rating === null || rating === 0) {
@@ -242,6 +250,14 @@ const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
     return newFeedback;
 };
 
+const settleUserOrders = async (userId) => {
+    const { rowCount } = await db.query(
+        `UPDATE orders SET status = $1 WHERE user_id = $2 AND status = $3`,
+        [ORDER_STATUS.SETTLED, userId, ORDER_STATUS.DELIVERED]
+    );
+    return { settled_count: rowCount };
+};
+
 module.exports = {
     createOrder,
     getOrderById,
@@ -250,4 +266,5 @@ module.exports = {
     updateOrderStatus,
     cancelOrder,
     addFeedbackToOrder,
+    settleUserOrders,
 };

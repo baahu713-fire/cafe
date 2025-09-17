@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getAllOrders, updateOrderStatus, cancelOrder } from '../../services/orderService';
-import { getAllUsers } from '../../services/userService';
-import { ORDER_STATUS } from '../../constants/orderStatus'; // Import the constants
+import { ORDER_STATUS } from '../../constants/orderStatus';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField
+  Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, 
+  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination
 } from '@mui/material';
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
-  const [users, setUsers] = useState({});
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openSettleDialog, setOpenSettleDialog] = useState(false);
@@ -18,22 +20,15 @@ const OrderManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
-  const fetchData = async () => {
+  const fetchOrders = async () => {
     try {
       setLoading(true);
-      const [ordersData, usersData] = await Promise.all([
-        getAllOrders(),
-        getAllUsers(),
-      ]);
-      setOrders(ordersData.orders);
-      const usersMap = usersData.reduce((acc, user) => {
-        acc[user.id] = user.email;
-        return acc;
-      }, {});
-      setUsers(usersMap);
+      const { orders: fetchedOrders, total } = await getAllOrders(page + 1, rowsPerPage);
+      setOrders(fetchedOrders);
+      setTotalOrders(total);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch data. Please try again later.');
+      setError('Failed to fetch orders. Please try again later.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -41,8 +36,8 @@ const OrderManagement = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchOrders();
+  }, [page, rowsPerPage]);
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -55,7 +50,7 @@ const OrderManagement = () => {
       alert('Failed to update order status.');
     }
   };
-
+  
   const handleOpenSettleDialog = (orderId) => {
     setSelectedOrderId(orderId);
     setOpenSettleDialog(true);
@@ -111,11 +106,10 @@ const OrderManagement = () => {
   const filteredOrders = useMemo(() => {
     return orders
       .filter(order => {
-        const userEmail = users[order.user_id] || '';
         const searchTermLower = searchTerm.toLowerCase();
         return (
           order.id.toString().includes(searchTermLower) ||
-          userEmail.toLowerCase().includes(searchTermLower) ||
+          order.user_id.toString().includes(searchTermLower) || // Searching by user ID now
           order.status.toLowerCase().includes(searchTermLower)
         );
       })
@@ -124,7 +118,16 @@ const OrderManagement = () => {
         const orderDate = new Date(order.created_at).toISOString().split('T')[0];
         return orderDate === filterDate;
       });
-  }, [orders, users, searchTerm, filterDate]);
+  }, [orders, searchTerm, filterDate]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   if (loading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>;
@@ -139,7 +142,7 @@ const OrderManagement = () => {
       <Typography variant="h5" gutterBottom>Manage All Orders</Typography>
       <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
         <TextField
-          label="Search by ID, Email, or Status"
+          label="Search by ID, User ID, or Status"
           variant="outlined"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -162,7 +165,7 @@ const OrderManagement = () => {
           <TableHead>
             <TableRow>
               <TableCell>Order ID</TableCell>
-              <TableCell>Ordered By</TableCell>
+              <TableCell>User ID</TableCell>
               <TableCell>Order Date</TableCell>
               <TableCell>Total Price</TableCell>
               <TableCell>Status</TableCell>
@@ -173,7 +176,7 @@ const OrderManagement = () => {
             {filteredOrders.map((order) => (
               <TableRow hover key={order.id}>
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
-                <TableCell>{users[order.user_id] || 'Unknown User'}</TableCell>
+                <TableCell>{order.user_id}</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleString()}</TableCell>
                 <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
                 <TableCell>
@@ -186,7 +189,6 @@ const OrderManagement = () => {
                   >
                     {Object.values(ORDER_STATUS).map(status => (
                         <MenuItem key={status} value={status} 
-                          // Disable terminal statuses in dropdown if not already set
                           disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status} 
                         >
                             {status}
@@ -221,6 +223,16 @@ const OrderManagement = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={totalOrders}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
 
       <Dialog open={openSettleDialog} onClose={handleCloseSettleDialog}>
         <DialogTitle>Settle Order Bill?</DialogTitle>

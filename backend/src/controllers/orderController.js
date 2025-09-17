@@ -61,36 +61,22 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-const cancelMyOrder = async (req, res) => {
+const cancelOrder = async (req, res) => {
     try {
         const orderId = req.params.id;
-        const userId = req.user.userId;
-        const updatedOrder = await orderService.cancelOrder(orderId, userId);
+        const user = req.user; // The full user object from authMiddleware
+        const updatedOrder = await orderService.cancelOrder(orderId, user);
         res.json(updatedOrder);
     } catch (error) {
+        let statusCode = 500;
         if (error.message.includes('not found')) {
-            return res.status(404).json({ message: error.message });
+            statusCode = 404;
+        } else if (error.message.includes('not authorized') || error.message.includes('not allowed')) {
+            statusCode = 403;
+        } else if (error.message.includes('already')) {
+            statusCode = 400;
         }
-        if (error.message.includes('not allowed')) {
-            return res.status(403).json({ message: error.message });
-        }
-        res.status(500).json({ message: error.message });
-    }
-};
-
-const cancelOrderAdmin = async (req, res) => {
-    try {
-        const orderId = req.params.id;
-        const updatedOrder = await orderService.cancelOrder(orderId);
-        res.json(updatedOrder);
-    } catch (error) {
-        if (error.message.includes('not found')) {
-            return res.status(404).json({ message: error.message });
-        }
-        if (error.message.includes('not allowed')) {
-            return res.status(403).json({ message: error.message });
-        }
-        res.status(500).json({ message: error.message });
+        res.status(statusCode).json({ message: error.message });
     }
 };
 
@@ -124,13 +110,23 @@ const addFeedback = async (req, res) => {
     }
 };
 
+const settleUserOrders = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const result = await orderService.settleUserOrders(userId);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to settle orders.' });
+    }
+};
+
 module.exports = {
   createOrder,
   getAllOrders,
   getMyOrders,
   getOrderById,
   updateOrderStatus,
-  cancelMyOrder,
-  cancelOrderAdmin,
+  cancelOrder,
   addFeedback,
+  settleUserOrders,
 };
