@@ -24,6 +24,9 @@ router.patch('/:id/status', admin, orderController.updateOrderStatus);
 // POST /api/orders/:id/cancel - Cancel an order (handles both user and admin logic)
 router.post('/:id/cancel', orderController.cancelOrder);
 
+// POST /api/orders/:id/dispute - Dispute an order (user)
+router.post('/:id/dispute', orderController.disputeOrder);
+
 // POST /api/orders/:orderId/feedback - Submit feedback for an order (user)
 router.post('/:orderId/feedback', orderController.addFeedback);
 

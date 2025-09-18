@@ -1,72 +1,289 @@
+const db = require('../config/database');
+const ORDER_STATUS = require('../constants/orderStatus');
 
-# **Project Blueprint: FastAPI Backend & React Frontend**
+// A helper to format order data consistently
+const parseOrder = (order) => {
+    if (!order) return null;
+    
+    const items = order.items || [];
+    const cleanedItems = items.filter(item => item !== null && item.id !== null);
 
-## **1. Overview**
+    return {
+        ...order,
+        total_price: order.total_price ? parseFloat(order.total_price) : 0,
+        items: cleanedItems,
+        feedback: order.feedback || null,
+    };
+};
 
-This document outlines the architecture, features, and implementation plan for a comprehensive web application with a FastAPI backend and a React frontend. The application is designed to serve as a food ordering platform with role-based access control for users and administrators.
+const createOrder = async (orderData, userId) => {
+    const { items, comment } = orderData;
+    let totalOrderPrice = 0;
+    const createdOrderItems = [];
 
-### **Core Capabilities:**
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
 
-*   **User Authentication:** Secure user registration and login with JWT-based authentication.
-*   **Team Management:** Admins can create, update, and delete teams.
-*   **Menu Management:** Admins can manage a detailed menu of food and beverage items, including complex properties like proportions and availability.
-*   **Order Processing:** Authenticated users can place orders, and admins can manage order statuses.
-*   **Role-Based Access Control (RBAC):** The application distinguishes between regular users and administrators, restricting access to sensitive operations.
-*   **Favorites:** Users can mark items as favorites for easy access.
-*   **Feedback:** Users can provide feedback on completed orders.
+        const uniqueItemIds = [...new Set(items.map(item => item.menu_item_id))];
+        const { rows: menuItems } = await client.query(
+            'SELECT * FROM menu_items WHERE id = ANY($1::int[]) AND available = TRUE AND deleted_from IS NULL',
+            [uniqueItemIds]
+        );
 
----
+        if (menuItems.length !== uniqueItemIds.length) {
+            throw new Error('One or more menu items are invalid, unavailable, or could not be found.');
+        }
 
-## **2. Backend (FastAPI) - Implemented**
+        const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
 
-The backend is built with Python using the FastAPI framework and connects to a PostgreSQL database.
+        for (const item of items) {
+            const menuItem = menuItemMap.get(item.menu_item_id);
+            if (!menuItem) {
+                throw new Error(`Menu item with ID ${item.menu_item_id} could not be found.`);
+            }
 
-### **Database Schema:**
+            let priceAtOrder;
+            let nameAtOrder = menuItem.name;
 
-*   **`teams`**: Manages organizational units.
-*   **`users`**: Stores user credentials, roles (`admin`, `staff`), and team associations.
-*   **`menu_items`**: Contains product details, including pricing, availability, soft deletes, and a `JSONB` field for proportions (e.g., sizes).
-*   **`orders`**: Header table for customer orders, linking to the user.
-*   **`order_items`**: Line items for each order, capturing the price and name of the item at the time of purchase.
-*   **`feedback`**: Stores user feedback, including a rating and a comment, linked to an order.
+            if (item.proportion_name) {
+                const selectedProportion = (menuItem.proportions || []).find(p => p.name === item.proportion_name);
+                if (!selectedProportion) {
+                    throw new Error(`Proportion '${item.proportion_name}' is not available for menu item '${menuItem.name}'.`);
+                }
+                priceAtOrder = selectedProportion.price;
+                nameAtOrder = `${menuItem.name} (${item.proportion_name})`;
+            } else {
+                priceAtOrder = menuItem.price;
+            }
 
-### **API Endpoints & Features:**
+            totalOrderPrice += priceAtOrder * item.quantity;
+            createdOrderItems.push({ ...item, price_at_order: priceAtOrder, name_at_order: nameAtOrder });
+        }
 
-*   **`/api/auth`**: User registration and login.
-*   **`/api/teams`**: CRUD operations for managing teams (Admin-only).
-*   **`/api/menu`**: CRUD operations for menu items, including soft deletes (Admin-only for modifications).
-*   **`/api/orders`**: Order creation for users and status management for admins.
-*   **`/api/feedback`**: Endpoint for submitting user feedback.
+        const { rows: [order] } = await client.query(
+            'INSERT INTO orders (user_id, total_price, status, comment) VALUES ($1, $2, $3, $4) RETURNING id, created_at, status, comment',
+            [userId, totalOrderPrice, ORDER_STATUS.PENDING, comment]
+        );
 
----
+        const orderItemsQueries = createdOrderItems.map(item => {
+            return client.query(
+                'INSERT INTO order_items (order_id, menu_item_id, proportion_name, quantity, price_at_order, name_at_order) VALUES ($1, $2, $3, $4, $5, $6)',
+                [order.id, item.menu_item_id, item.proportion_name, item.quantity, item.price_at_order, item.name_at_order]
+            );
+        });
 
-## **3. Frontend (React) - Implemented**
+        await Promise.all(orderItemsQueries);
+        await client.query('COMMIT');
 
-The frontend is a modern, responsive, and user-friendly application built with React.
+        return { ...order, total_price: totalOrderPrice, items: createdOrderItems };
 
-### **Technology Stack:**
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};
 
-*   **Framework:** React (using Vite)
-*   **Routing:** `react-router-dom`
-*   **API Communication:** `axios`
-*   **Component Library:** Material-UI (MUI)
-*   **State Management:** React Hooks (`useState`, `useEffect`, `useContext`) and custom hooks (`useMenu`, `useCart`, `useFavorites`).
+const getOrderById = async (orderId, user) => {
+    const params = [orderId];
+    let userClause = '';
+    if (user.role !== 'admin') {
+        userClause = 'AND o.user_id = $2';
+        params.push(user.userId);
+    }
 
-### **Implemented Features:**
+    const query = `
+        SELECT 
+            o.*,
+            COALESCE(
+                (
+                    SELECT json_agg(oi.*)
+                    FROM order_items oi WHERE oi.order_id = o.id
+                ), '[]'::json
+            ) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        WHERE o.id = $1 ${userClause}
+    `;
 
-*   **Authentication Flow:** A complete authentication system is in place. Users can register and log in, with JWT tokens managed via `localStorage`. An `AuthContext` provides global state, and a centralized `axios` instance in `services/api.js` automatically attaches the token to authenticated requests.
-*   **User-Facing Features:**
-    *   **`MenuPage`**: Displays the full menu with search and filtering capabilities. Users can add items to their cart directly from this page.
-    *   **`CartPage`**: Shows the items in the user's cart, allowing for quantity adjustments and order placement.
-    *   **`OrderHistoryPage`**: Displays a list of the user's past orders with their current status.
-    *   **`FeedbackPage`**: Allows users to submit feedback for completed orders.
-    *   **`FavoritesPage`**: Displays the user's favorite menu items.
-    *   **`MenuItemCard`**: A reusable component to display menu items, with controls for selecting proportions, adding to the cart, and marking as a favorite.
-*   **Admin Dashboard:** A feature-rich admin page is available at the `/admin` route, accessible only to users with the 'admin' role. It features a tabbed interface for managing different aspects of the application:
-    *   **User Management:** Admins can view a list of all registered users, search them by email, and see a summary of their delivered versus settled orders. It provides a function to settle all of a user's outstanding delivered orders in a single action.
-    *   **Order Management:** Admins have a complete overview of all orders placed in the system. They can filter orders by date or search by ID, user email, or status. They can update the status of any order (e.g., 'Pending' to 'Confirmed') and have the ability to cancel pending orders or settle delivered ones.
-    *   **Menu Management:** Admins have full CRUD (Create, Read, Update, Delete) capabilities for the restaurant's menu. They can add new items, edit existing ones (including name, description, image, availability, and pricing proportions), and remove items from the menu.
+    const { rows: [order] } = await db.query(query, params);
+    
+    if (!order) {
+        throw new Error('Order not found or access denied.');
+    }
 
-### **Next Steps:**
+    return parseOrder(order);
+};
 
-*   The frontend is feature-complete. The next steps would involve any UI/UX refinements, further testing, and deployment.
+const getOrdersByUserId = async (userId, page, limit) => {
+    const offset = (page - 1) * limit;
+
+    const totalQuery = 'SELECT COUNT(*) FROM orders WHERE user_id = $1';
+    const totalResult = await db.query(totalQuery, [userId]);
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const ordersQuery = `
+        SELECT 
+            o.*,
+            COALESCE((
+                SELECT json_agg(oi.*) 
+                FROM order_items oi WHERE oi.order_id = o.id
+            ), '[]'::json) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        WHERE o.user_id = $1
+        ORDER BY o.created_at DESC
+        LIMIT $2 OFFSET $3;
+    `;
+    const { rows: orders } = await db.query(ordersQuery, [userId, limit, offset]);
+
+    return { orders: orders.map(parseOrder), total };
+};
+
+const getAllOrders = async (page, limit) => {
+    const offset = (page - 1) * limit;
+
+    const totalQuery = 'SELECT COUNT(*) FROM orders';
+    const totalResult = await db.query(totalQuery);
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const ordersQuery = `
+        SELECT 
+            o.*, 
+            COALESCE((
+                SELECT json_agg(oi.*) 
+                FROM order_items oi WHERE oi.order_id = o.id
+            ), '[]'::json) as items,
+            (
+                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
+                FROM feedback f WHERE f.order_id = o.id
+                LIMIT 1
+            ) as feedback
+        FROM orders o
+        ORDER BY o.created_at DESC
+        LIMIT $1 OFFSET $2;
+    `;
+    const { rows: orders } = await db.query(ordersQuery, [limit, offset]);
+
+    return { orders: orders.map(parseOrder), total };
+};
+
+const updateOrderStatus = async (orderId, status) => {
+    if (!Object.values(ORDER_STATUS).includes(status)) {
+        throw new Error(`Invalid status: ${status}`);
+    }
+    const { rows: [updatedOrder] } = await db.query(
+        'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+        [status, orderId]
+    );
+    if (!updatedOrder) {
+        throw new Error('Order not found.');
+    }
+    return parseOrder(updatedOrder);
+};
+
+const cancelOrder = async (orderId, user) => {
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+
+    if (!order) {
+        throw new Error('Order not found.');
+    }
+
+    // Admins can cancel any order, otherwise, the user must own the order.
+    if (user.role !== 'admin' && order.user_id !== user.userId) {
+        throw new Error('You are not authorized to cancel this order.');
+    }
+
+    // Regular users can only cancel orders that are PENDING.
+    if (user.role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
+        throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
+    }
+
+    // Nobody can cancel an order that is already settled or cancelled.
+    if ([ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)) {
+         throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
+    }
+
+    const { rows: [updatedOrder] } = await db.query(
+        'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+        [ORDER_STATUS.CANCELLED, orderId]
+    );
+
+    return parseOrder(updatedOrder);
+};
+
+const disputeOrder = async (orderId, userId) => {
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
+
+    if (!order) {
+        throw new Error('Order not found or you are not authorized to dispute this order.');
+    }
+
+    if (![ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERED].includes(order.status)) {
+        throw new Error(`Orders with status '${order.status}' cannot be disputed.`);
+    }
+
+    const { rows: [updatedOrder] } = await db.query(
+        'UPDATE orders SET disputed = TRUE WHERE id = $1 RETURNING *',
+        [orderId]
+    );
+
+    return parseOrder(updatedOrder);
+};
+
+const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
+    if (rating === undefined || rating === null || rating === 0) {
+        throw new Error('Rating is required.');
+    }
+    
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
+
+    if (!order) {
+        throw new Error('Order not found or you are not authorized to add feedback.');
+    }
+
+    if (order.status !== ORDER_STATUS.DELIVERED && order.status !== ORDER_STATUS.SETTLED) {
+        throw new Error('Feedback can only be added to delivered or settled orders.');
+    }
+
+    const { rows: [existingFeedback] } = await db.query('SELECT * FROM feedback WHERE order_id = $1', [orderId]);
+    if (existingFeedback) {
+        throw new Error('Feedback has already been submitted for this order.');
+    }
+
+    const { rows: [newFeedback] } = await db.query(
+        'INSERT INTO feedback (order_id, rating, comment) VALUES ($1, $2, $3) RETURNING *',
+        [orderId, rating, comment]
+    );
+    return newFeedback;
+};
+
+const settleUserOrders = async (userId) => {
+    const { rowCount } = await db.query(
+        `UPDATE orders SET status = $1 WHERE user_id = $2 AND status = $3`,
+        [ORDER_STATUS.SETTLED, userId, ORDER_STATUS.DELIVERED]
+    );
+    return { settled_count: rowCount };
+};
+
+module.exports = {
+    createOrder,
+    getOrderById,
+    getOrdersByUserId,
+    getAllOrders,
+    updateOrderStatus,
+    cancelOrder,
+    disputeOrder,
+    addFeedbackToOrder,
+    settleUserOrders,
+};

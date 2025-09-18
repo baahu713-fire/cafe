@@ -4,8 +4,54 @@ import { ORDER_STATUS } from '../../constants/orderStatus';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, 
-  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination
+  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip
 } from '@mui/material';
+
+const OrderDetailsDialog = ({ order, open, onClose }) => {
+    if (!order) return null;
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+            <DialogTitle>Order #{order.id} Details</DialogTitle>
+            <DialogContent dividers>
+                <Typography variant="h6">Items</Typography>
+                <TableContainer component={Paper} sx={{ my: 2 }} >
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Item</TableCell>
+                                <TableCell align="right">Quantity</TableCell>
+                                <TableCell align="right">Price at Order</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {order.items.map((item, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{item.name_at_order}</TableCell>
+                                    <TableCell align="right">{item.quantity}</TableCell>
+                                    <TableCell align="right">₹{parseFloat(item.price_at_order).toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                {order.comment && (
+                    <Box mt={2}>
+                        <Typography variant="h6">Comment</Typography>
+                        <Paper elevation={1} sx={{ p: 2, mt: 1, backgroundColor: '#f9f9f9' }}>
+                            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
+                                {order.comment}
+                            </Typography>
+                        </Paper>
+                    </Box>
+                )}
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
@@ -17,6 +63,7 @@ const OrderManagement = () => {
   const [openSettleDialog, setOpenSettleDialog] = useState(false);
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
@@ -103,13 +150,21 @@ const OrderManagement = () => {
     }
   };
 
+  const handleViewDetails = (order) => {
+    setSelectedOrderDetails(order);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedOrderDetails(null);
+  };
+
   const filteredOrders = useMemo(() => {
     return orders
       .filter(order => {
         const searchTermLower = searchTerm.toLowerCase();
         return (
           order.id.toString().includes(searchTermLower) ||
-          order.user_id.toString().includes(searchTermLower) || // Searching by user ID now
+          order.user_id.toString().includes(searchTermLower) ||
           order.status.toLowerCase().includes(searchTermLower)
         );
       })
@@ -169,6 +224,7 @@ const OrderManagement = () => {
               <TableCell>Order Date</TableCell>
               <TableCell>Total Price</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Disputed</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -196,7 +252,18 @@ const OrderManagement = () => {
                     ))}
                   </Select>
                 </TableCell>
+                <TableCell>
+                    {order.disputed && <Chip label="Disputed" color="error" />}
+                </TableCell>
                 <TableCell align="right">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleViewDetails(order)}
+                    sx={{ mr: 1 }}
+                  >
+                    View Details
+                  </Button>
                   {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED].includes(order.status) && (
                       <Button
                         variant="contained"
@@ -233,6 +300,8 @@ const OrderManagement = () => {
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
+
+      <OrderDetailsDialog order={selectedOrderDetails} open={!!selectedOrderDetails} onClose={handleCloseDetails} />
 
       <Dialog open={openSettleDialog} onClose={handleCloseSettleDialog}>
         <DialogTitle>Settle Order Bill?</DialogTitle>

@@ -110,6 +110,7 @@ const CartProvider = ({ children, user }) => {
         setOrderSuccess(false);
 
         const orderData = {
+            userId: finalUserId,
             items: cart.map(item => {
                 const proportionName = item.proportion?.name;
                 let finalProportionName;

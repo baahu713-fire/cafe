@@ -3,8 +3,16 @@ const ORDER_STATUS = require('../constants/orderStatus');
 
 const createOrder = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const order = await orderService.createOrder(req.body, userId);
+    const requestingUser = req.user;
+    const { userId: userIdToOrderFor, ...orderData } = req.body;
+
+    let finalUserId = requestingUser.userId;
+
+    if (requestingUser.role === 'admin' && userIdToOrderFor) {
+        finalUserId = userIdToOrderFor;
+    }
+
+    const order = await orderService.createOrder(orderData, finalUserId);
     res.status(201).json(order);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -80,6 +88,17 @@ const cancelOrder = async (req, res) => {
     }
 };
 
+const disputeOrder = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const userId = req.user.userId;
+        const updatedOrder = await orderService.disputeOrder(orderId, userId);
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 const addFeedback = async (req, res) => {
     const { orderId } = req.params;
     const userId = req.user.userId;
@@ -127,6 +146,7 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   cancelOrder,
+  disputeOrder,
   addFeedback,
   settleUserOrders,
 };

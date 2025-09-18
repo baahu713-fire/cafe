@@ -222,6 +222,24 @@ const cancelOrder = async (orderId, user) => {
     return parseOrder(updatedOrder);
 };
 
+const disputeOrder = async (orderId, userId) => {
+    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
+
+    if (!order) {
+        throw new Error('Order not found or you are not authorized to dispute this order.');
+    }
+
+    if (![ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERED].includes(order.status)) {
+        throw new Error(`Orders with status '${order.status}' cannot be disputed.`);
+    }
+
+    const { rows: [updatedOrder] } = await db.query(
+        'UPDATE orders SET disputed = TRUE WHERE id = $1 RETURNING *',
+        [orderId]
+    );
+
+    return parseOrder(updatedOrder);
+};
 
 const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
     if (rating === undefined || rating === null || rating === 0) {
@@ -265,6 +283,7 @@ module.exports = {
     getAllOrders,
     updateOrderStatus,
     cancelOrder,
+    disputeOrder,
     addFeedbackToOrder,
     settleUserOrders,
 };

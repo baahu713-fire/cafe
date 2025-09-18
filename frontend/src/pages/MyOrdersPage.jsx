@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyOrders, cancelOrder } from '../services/orderService';
+import { getMyOrders, cancelOrder, disputeOrder } from '../services/orderService';
 import { submitFeedback } from '../services/feedbackService';
 import FeedbackForm from '../components/FeedbackForm';
 import { ORDER_STATUS } from '../constants/orderStatus';
@@ -26,6 +26,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -54,7 +58,7 @@ const StatusChip = ({ status }) => {
   return <Chip label={status} color={color} size="small" sx={{ fontWeight: 'bold' }} />;
 };
 
-const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onReorder }) => {
+const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder, onReorder }) => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const isCancellable = 
     (order.status === ORDER_STATUS.PENDING || order.status === ORDER_STATUS.CONFIRMED) &&
@@ -62,6 +66,7 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onReorder }) =
 
   const canLeaveFeedback = order.status === ORDER_STATUS.DELIVERED || order.status === ORDER_STATUS.SETTLED;
   const canReorder = order.status !== ORDER_STATUS.CANCELLED;
+  const canDispute = [ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERED].includes(order.status);
 
   return (
     <Accordion sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' } }}>
@@ -69,7 +74,10 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onReorder }) =
         <Grid container alignItems="center" spacing={2} sx={{ flexGrow: 1 }}>
             <Grid item xs={12} sm={2}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
             <Grid item xs={12} sm={3}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
-            <Grid item xs={6} sm={2}><StatusChip status={order.status} /></Grid>
+            <Grid item xs={6} sm={2}>
+                <StatusChip status={order.status} />
+                {order.disputed && <Chip label="Disputed" color="error" size="small" sx={{ ml: 1, fontWeight: 'bold' }} />}
+            </Grid>
             <Grid item xs={6} sm={2}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
             <Grid item xs={12} sm={3}>
                 {order.feedback ? (
@@ -118,6 +126,11 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onReorder }) =
                     Reorder
                 </Button>
             )}
+            {canDispute && (
+                <Button size="small" color="warning" onClick={() => onDisputeOrder(order.id)} sx={{ mr: 1 }} disabled={order.disputed}>
+                    {order.disputed ? 'Disputed' : 'Dispute'}
+                </Button>
+            )}
         </Grid>
 
         {canLeaveFeedback && (
@@ -161,6 +174,7 @@ const MyOrdersPage = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
@@ -220,6 +234,17 @@ const MyOrdersPage = ({ user }) => {
     }
   };
 
+  const handleDisputeOrder = async (orderId) => {
+    if (window.confirm('Are you sure you want to dispute this order?')) {
+        try {
+            await disputeOrder(orderId);
+            fetchOrders(1);
+        } catch (err) {
+            setError(err.message || 'Failed to dispute the order.');
+        }
+    }
+  };
+
   const handleReorder = async (order) => {
     if (!order || !Array.isArray(order.items) || order.items.length === 0) {
         setError("This order has no items available to reorder.");
@@ -244,7 +269,8 @@ const MyOrdersPage = ({ user }) => {
 
   const filteredOrders = orders.filter(order => {
     const search = searchTerm.toLowerCase();
-    return (
+    const statusMatch = statusFilter ? order.status === statusFilter : true;
+    const searchMatch = (
         order.id.toString().includes(search) ||
         order.status.toLowerCase().includes(search) ||
         (order.comment && order.comment.toLowerCase().includes(search)) ||
@@ -252,6 +278,7 @@ const MyOrdersPage = ({ user }) => {
         (order.feedback && order.feedback.rating.toString().includes(search)) ||
         (order.feedback && order.feedback.comment && order.feedback.comment.toLowerCase().includes(search))
     );
+    return statusMatch && searchMatch;
   });
 
   return (
@@ -260,21 +287,40 @@ const MyOrdersPage = ({ user }) => {
             <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                 My Orders
             </Typography>
-            <TextField
-                fullWidth
-                variant="outlined"
-                placeholder="Search by ID, Status, Comments, Date, or Rating..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                            <SearchIcon color="action" />
-                        </InputAdornment>
-                    ),
-                    sx: { borderRadius: '8px' }
-                }}
-            />
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={8}>
+                    <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="Search by ID, Status, Comments, Date, or Rating..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon color="action" />
+                                </InputAdornment>
+                            ),
+                            sx: { borderRadius: '8px' }
+                        }}
+                    />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                    <FormControl fullWidth variant="outlined">
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            label="Status"
+                        >
+                            <MenuItem value=""><em>All Statuses</em></MenuItem>
+                            {Object.values(ORDER_STATUS).map(status => (
+                                <MenuItem key={status} value={status}>{status}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Grid>
+            </Grid>
         </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
@@ -286,6 +332,7 @@ const MyOrdersPage = ({ user }) => {
               order={order} 
               onFeedbackSubmit={handleFeedbackSubmit} 
               onCancelOrder={handleCancelOrder} 
+              onDisputeOrder={handleDisputeOrder} 
               onReorder={handleReorder} 
             />
           ))
@@ -295,7 +342,7 @@ const MyOrdersPage = ({ user }) => {
           <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box>
       )}
 
-      {!loading && orders.length === 0 && !searchTerm && (
+      {!loading && orders.length === 0 && !searchTerm && !statusFilter && (
         <Paper sx={{ textAlign: 'center', p: 4, borderRadius: '16px' }}>
           <Typography variant="h6">You haven't placed any orders yet.</Typography>
           <Button variant="contained" component={Link} to="/" sx={{ mt: 2 }}>
@@ -304,7 +351,7 @@ const MyOrdersPage = ({ user }) => {
         </Paper>
       )}
 
-      {!loading && orders.length < total && !searchTerm && (
+      {!loading && orders.length < total && !searchTerm && !statusFilter && (
         <Box textAlign="center" sx={{ mt: 3 }}>
             <Button variant="contained" onClick={handleLoadMore} disabled={loading}>
                 Load More Orders
@@ -312,7 +359,7 @@ const MyOrdersPage = ({ user }) => {
         </Box>
       )}
 
-      {!loading && searchTerm && filteredOrders.length === 0 && (
+      {!loading && (searchTerm || statusFilter) && filteredOrders.length === 0 && (
           <Paper sx={{ textAlign: 'center', p: 4, borderRadius: '16px' }}>
               <Typography variant="h6">No orders match your search.</Typography>
           </Paper>

@@ -49,3 +49,8 @@ export const cancelOrder = async (orderId) => {
     const response = await api.post(`/orders/${orderId}/cancel`);
     return adaptOrderToFrontend(response.data);
 };
+
+export const disputeOrder = async (orderId) => {
+    const response = await api.post(`/orders/${orderId}/dispute`);
+    return adaptOrderToFrontend(response.data);
+};

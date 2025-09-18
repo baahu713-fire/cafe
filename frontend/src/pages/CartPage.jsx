@@ -14,11 +14,16 @@ import {
     IconButton,
     TextField,
     CircularProgress,
-    Alert
+    Alert,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem
 } from '@mui/material';
 import { Add, Remove, Delete } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
+import useUsers from '../hooks/useUsers';
 
 const CartPage = ({ user }) => {
     const {
@@ -34,6 +39,8 @@ const CartPage = ({ user }) => {
     } = useCart();
 
     const [comment, setComment] = useState('');
+    const [selectedUser, setSelectedUser] = useState('');
+    const { users } = useUsers(user);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -51,11 +58,13 @@ const CartPage = ({ user }) => {
 
     const handleCheckout = () => {
         if (!user) {
-            // If user is not logged in, redirect to login page,
-            // saving the current location to redirect back to the cart.
             navigate('/login', { state: { from: location } });
         } else {
-            placeOrder(comment);
+            if (user.isAdmin && !selectedUser) {
+                alert('Please select a user to place the order for.');
+                return;
+            }
+            placeOrder(comment, selectedUser);
         }
     };
     
@@ -125,6 +134,26 @@ const CartPage = ({ user }) => {
                         </Table>
                     </TableContainer>
                     <Box sx={{ mt: 4, textAlign: 'right' }}>
+                        {user && user.isAdmin && (
+                            <FormControl fullWidth sx={{ my: 2 }}>
+                                <InputLabel id="user-select-label">Place Order For</InputLabel>
+                                <Select
+                                    labelId="user-select-label"
+                                    value={selectedUser}
+                                    label="Place Order For"
+                                    onChange={(e) => setSelectedUser(e.target.value)}
+                                >
+                                    <MenuItem value="">
+                                        <em>Select a user</em>
+                                    </MenuItem>
+                                    {users.map((user) => (
+                                        <MenuItem key={user.id} value={user.id}>
+                                            {user.email}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        )}
                         <Typography variant="h5">Subtotal ({itemCount} items): ₹{totalPrice.toFixed(2)}</Typography>
                         <TextField
                             label="Add a comment to your order..."
