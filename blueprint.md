@@ -1,289 +1,38 @@
-const db = require('../config/database');
-const ORDER_STATUS = require('../constants/orderStatus');
+# Project Blueprint
 
-// A helper to format order data consistently
-const parseOrder = (order) => {
-    if (!order) return null;
-    
-    const items = order.items || [];
-    const cleanedItems = items.filter(item => item !== null && item.id !== null);
+## Overview
 
-    return {
-        ...order,
-        total_price: order.total_price ? parseFloat(order.total_price) : 0,
-        items: cleanedItems,
-        feedback: order.feedback || null,
-    };
-};
+This document outlines the architecture and features of the Food Ordering PWA. The application is a progressive web app built with React for the frontend and a Node.js/Express backend.
 
-const createOrder = async (orderData, userId) => {
-    const { items, comment } = orderData;
-    let totalOrderPrice = 0;
-    const createdOrderItems = [];
+## Features
 
-    const client = await db.pool.connect();
-    try {
-        await client.query('BEGIN');
+### Core Features
 
-        const uniqueItemIds = [...new Set(items.map(item => item.menu_item_id))];
-        const { rows: menuItems } = await client.query(
-            'SELECT * FROM menu_items WHERE id = ANY($1::int[]) AND available = TRUE AND deleted_from IS NULL',
-            [uniqueItemIds]
-        );
+*   **User Authentication:** Users can register, log in, and log out. Admins have a separate login and dashboard.
+*   **Menu Management:** Admins can add, edit, and delete menu items.
+*   **Order Management:** Users can place orders, view their order history, and cancel recent orders. Admins can manage all orders, update their status, and settle user accounts.
+*   **Shopping Cart:** Users can add items to their cart and checkout.
+*   **Favorites:** Users can mark items as favorites for easy reordering.
+*   **Feedback:** Users can leave feedback and a rating on their orders.
+*   **Order Dispute:** Users can dispute an order from their "My Orders" page.
+*   **Dispute Visibility:** Admins can see which orders have been disputed in the "Manage Orders" dashboard.
 
-        if (menuItems.length !== uniqueItemIds.length) {
-            throw new Error('One or more menu items are invalid, unavailable, or could not be found.');
-        }
+### New Features
 
-        const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
+*   **Dockerization:** The entire application is now containerized with Docker and can be run with Docker Compose.
 
-        for (const item of items) {
-            const menuItem = menuItemMap.get(item.menu_item_id);
-            if (!menuItem) {
-                throw new Error(`Menu item with ID ${item.menu_item_id} could not be found.`);
-            }
+## Technical Details
 
-            let priceAtOrder;
-            let nameAtOrder = menuItem.name;
+*   **Frontend:** React, Material-UI, Nginx
+*   **Backend:** Node.js, Express, PostgreSQL
+*   **Authentication:** JWT
+*   **Containerization:** Docker, Docker Compose
 
-            if (item.proportion_name) {
-                const selectedProportion = (menuItem.proportions || []).find(p => p.name === item.proportion_name);
-                if (!selectedProportion) {
-                    throw new Error(`Proportion '${item.proportion_name}' is not available for menu item '${menuItem.name}'.`);
-                }
-                priceAtOrder = selectedProportion.price;
-                nameAtOrder = `${menuItem.name} (${item.proportion_name})`;
-            } else {
-                priceAtOrder = menuItem.price;
-            }
+## Current Task: Dockerize the Application
 
-            totalOrderPrice += priceAtOrder * item.quantity;
-            createdOrderItems.push({ ...item, price_at_order: priceAtOrder, name_at_order: nameAtOrder });
-        }
-
-        const { rows: [order] } = await client.query(
-            'INSERT INTO orders (user_id, total_price, status, comment) VALUES ($1, $2, $3, $4) RETURNING id, created_at, status, comment',
-            [userId, totalOrderPrice, ORDER_STATUS.PENDING, comment]
-        );
-
-        const orderItemsQueries = createdOrderItems.map(item => {
-            return client.query(
-                'INSERT INTO order_items (order_id, menu_item_id, proportion_name, quantity, price_at_order, name_at_order) VALUES ($1, $2, $3, $4, $5, $6)',
-                [order.id, item.menu_item_id, item.proportion_name, item.quantity, item.price_at_order, item.name_at_order]
-            );
-        });
-
-        await Promise.all(orderItemsQueries);
-        await client.query('COMMIT');
-
-        return { ...order, total_price: totalOrderPrice, items: createdOrderItems };
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
-    }
-};
-
-const getOrderById = async (orderId, user) => {
-    const params = [orderId];
-    let userClause = '';
-    if (user.role !== 'admin') {
-        userClause = 'AND o.user_id = $2';
-        params.push(user.userId);
-    }
-
-    const query = `
-        SELECT 
-            o.*,
-            COALESCE(
-                (
-                    SELECT json_agg(oi.*)
-                    FROM order_items oi WHERE oi.order_id = o.id
-                ), '[]'::json
-            ) as items,
-            (
-                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
-                FROM feedback f WHERE f.order_id = o.id
-                LIMIT 1
-            ) as feedback
-        FROM orders o
-        WHERE o.id = $1 ${userClause}
-    `;
-
-    const { rows: [order] } = await db.query(query, params);
-    
-    if (!order) {
-        throw new Error('Order not found or access denied.');
-    }
-
-    return parseOrder(order);
-};
-
-const getOrdersByUserId = async (userId, page, limit) => {
-    const offset = (page - 1) * limit;
-
-    const totalQuery = 'SELECT COUNT(*) FROM orders WHERE user_id = $1';
-    const totalResult = await db.query(totalQuery, [userId]);
-    const total = parseInt(totalResult.rows[0].count, 10);
-
-    const ordersQuery = `
-        SELECT 
-            o.*,
-            COALESCE((
-                SELECT json_agg(oi.*) 
-                FROM order_items oi WHERE oi.order_id = o.id
-            ), '[]'::json) as items,
-            (
-                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
-                FROM feedback f WHERE f.order_id = o.id
-                LIMIT 1
-            ) as feedback
-        FROM orders o
-        WHERE o.user_id = $1
-        ORDER BY o.created_at DESC
-        LIMIT $2 OFFSET $3;
-    `;
-    const { rows: orders } = await db.query(ordersQuery, [userId, limit, offset]);
-
-    return { orders: orders.map(parseOrder), total };
-};
-
-const getAllOrders = async (page, limit) => {
-    const offset = (page - 1) * limit;
-
-    const totalQuery = 'SELECT COUNT(*) FROM orders';
-    const totalResult = await db.query(totalQuery);
-    const total = parseInt(totalResult.rows[0].count, 10);
-
-    const ordersQuery = `
-        SELECT 
-            o.*, 
-            COALESCE((
-                SELECT json_agg(oi.*) 
-                FROM order_items oi WHERE oi.order_id = o.id
-            ), '[]'::json) as items,
-            (
-                SELECT json_build_object('id', f.id, 'rating', f.rating, 'comment', f.comment)
-                FROM feedback f WHERE f.order_id = o.id
-                LIMIT 1
-            ) as feedback
-        FROM orders o
-        ORDER BY o.created_at DESC
-        LIMIT $1 OFFSET $2;
-    `;
-    const { rows: orders } = await db.query(ordersQuery, [limit, offset]);
-
-    return { orders: orders.map(parseOrder), total };
-};
-
-const updateOrderStatus = async (orderId, status) => {
-    if (!Object.values(ORDER_STATUS).includes(status)) {
-        throw new Error(`Invalid status: ${status}`);
-    }
-    const { rows: [updatedOrder] } = await db.query(
-        'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
-        [status, orderId]
-    );
-    if (!updatedOrder) {
-        throw new Error('Order not found.');
-    }
-    return parseOrder(updatedOrder);
-};
-
-const cancelOrder = async (orderId, user) => {
-    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1', [orderId]);
-
-    if (!order) {
-        throw new Error('Order not found.');
-    }
-
-    // Admins can cancel any order, otherwise, the user must own the order.
-    if (user.role !== 'admin' && order.user_id !== user.userId) {
-        throw new Error('You are not authorized to cancel this order.');
-    }
-
-    // Regular users can only cancel orders that are PENDING.
-    if (user.role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
-        throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
-    }
-
-    // Nobody can cancel an order that is already settled or cancelled.
-    if ([ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)) {
-         throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
-    }
-
-    const { rows: [updatedOrder] } = await db.query(
-        'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
-        [ORDER_STATUS.CANCELLED, orderId]
-    );
-
-    return parseOrder(updatedOrder);
-};
-
-const disputeOrder = async (orderId, userId) => {
-    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
-
-    if (!order) {
-        throw new Error('Order not found or you are not authorized to dispute this order.');
-    }
-
-    if (![ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERED].includes(order.status)) {
-        throw new Error(`Orders with status '${order.status}' cannot be disputed.`);
-    }
-
-    const { rows: [updatedOrder] } = await db.query(
-        'UPDATE orders SET disputed = TRUE WHERE id = $1 RETURNING *',
-        [orderId]
-    );
-
-    return parseOrder(updatedOrder);
-};
-
-const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
-    if (rating === undefined || rating === null || rating === 0) {
-        throw new Error('Rating is required.');
-    }
-    
-    const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
-
-    if (!order) {
-        throw new Error('Order not found or you are not authorized to add feedback.');
-    }
-
-    if (order.status !== ORDER_STATUS.DELIVERED && order.status !== ORDER_STATUS.SETTLED) {
-        throw new Error('Feedback can only be added to delivered or settled orders.');
-    }
-
-    const { rows: [existingFeedback] } = await db.query('SELECT * FROM feedback WHERE order_id = $1', [orderId]);
-    if (existingFeedback) {
-        throw new Error('Feedback has already been submitted for this order.');
-    }
-
-    const { rows: [newFeedback] } = await db.query(
-        'INSERT INTO feedback (order_id, rating, comment) VALUES ($1, $2, $3) RETURNING *',
-        [orderId, rating, comment]
-    );
-    return newFeedback;
-};
-
-const settleUserOrders = async (userId) => {
-    const { rowCount } = await db.query(
-        `UPDATE orders SET status = $1 WHERE user_id = $2 AND status = $3`,
-        [ORDER_STATUS.SETTLED, userId, ORDER_STATUS.DELIVERED]
-    );
-    return { settled_count: rowCount };
-};
-
-module.exports = {
-    createOrder,
-    getOrderById,
-    getOrdersByUserId,
-    getAllOrders,
-    updateOrderStatus,
-    cancelOrder,
-    disputeOrder,
-    addFeedbackToOrder,
-    settleUserOrders,
-};
+*   **Objective:** Containerize the frontend and backend applications to run with Docker Compose.
+*   **Steps Taken:**
+    1.  Created a `Dockerfile` for the backend Node.js application.
+    2.  Created a `Dockerfile` for the frontend React application, using a multi-stage build with Nginx.
+    3.  Added an `nginx.conf` file to the frontend to proxy API requests.
+    4.  Created a `docker-compose.yml` file to define and link the `frontend`, `backend`, and `db` services.
