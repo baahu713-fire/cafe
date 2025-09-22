@@ -72,6 +72,10 @@ const MenuItemCard = ({ item }) => {
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+    // Correctly use the `available` boolean field.
+    const isAvailable = item.available;
+    const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price));
+
     const handleToggleFavorite = () => {
         if (isFavorite(item.id)) {
             removeFavorite(item.id);
@@ -81,6 +85,8 @@ const MenuItemCard = ({ item }) => {
     };
     
     const handleAddToCartClick = () => {
+        if (!isPurchasable) return; // Prevent adding unavailable items
+
         const hasProportions = item.proportions && item.proportions.length > 0;
 
         if (hasProportions) {
@@ -105,11 +111,16 @@ const MenuItemCard = ({ item }) => {
         });
         setIsDialogOpen(false);
     };
-    
-    const isPurchasable = item.price != null && !isNaN(parseFloat(item.price));
 
     return (
-        <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Card sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+            backgroundColor: !isAvailable ? '#f5f5f5' : '#fff', // Vintage-style background for unavailable items
+            opacity: !isAvailable ? 0.6 : 1,
+            transition: 'opacity 0.3s ease-in-out',
+        }}>
             <Box sx={{ position: 'relative' }}>
                 <CardMedia
                     component="img"
@@ -137,12 +148,22 @@ const MenuItemCard = ({ item }) => {
                      <Typography variant="h6" sx={{ mb: 2 }}>
                         ₹{parseFloat(item.price).toFixed(2)}
                      </Typography>
-                ) : null}
+                ) : (
+                    <Typography variant="h6" sx={{ mb: 2, color: '#757575', fontStyle: 'italic' }}>
+                        Unavailable
+                    </Typography>
+                )}
 
                 <Button 
                     variant="contained" 
                     onClick={handleAddToCartClick}
-                    disabled={!isPurchasable}
+                    disabled={!isPurchasable} // Disable button if not purchasable
+                    sx={{ 
+                        backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.main',
+                        '&:hover': {
+                            backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.dark',
+                        },
+                    }}
                 >
                     {isPurchasable ? 'Add to Cart' : 'Unavailable'}
                 </Button>

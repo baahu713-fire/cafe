@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Container,
@@ -8,17 +8,36 @@ import {
   TextField,
   Button,
   Grid,
-  Alert
+  Alert,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl
 } from '@mui/material';
+import api from '../services/api';
 
-// The onRegister prop will now be passed from App.jsx to handle registration logic.
 const RegisterPage = ({ onRegister }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [photo, setPhoto] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [teamId, setTeamId] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const response = await api.get('/teams');
+        setTeams(response.data);
+      } catch (err) {
+        setError('Failed to fetch teams.');
+      }
+    };
+    fetchTeams();
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,16 +48,28 @@ const RegisterPage = ({ onRegister }) => {
       return;
     }
 
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('team_id', teamId);
+    if (photo) {
+      formData.append('photo', photo);
+    }
+
     try {
-      // We now pass an object with name, email, and password to the handler.
-      const result = await onRegister({ name, email, password });
+      const result = await onRegister(formData);
       if (result.success) {
         navigate('/'); // Redirect to home on successful registration
       } else {
         setError(result.message || 'Failed to create an account.');
       }
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError(err.message || 'An unexpected error occurred.');
+      }
     }
   };
 
@@ -107,6 +138,36 @@ const RegisterPage = ({ onRegister }) => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
+            <FormControl fullWidth margin="normal">
+                <InputLabel id="team-select-label">Team</InputLabel>
+                <Select
+                    labelId="team-select-label"
+                    id="team-select"
+                    value={teamId}
+                    label="Team"
+                    onChange={(e) => setTeamId(e.target.value)}
+                >
+                    {teams.map((team) => (
+                        <MenuItem key={team.id} value={team.id}>
+                            {team.name}
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
+          <Button
+            variant="contained"
+            component="label"
+            fullWidth
+            sx={{ mt: 2 }}
+          >
+            Upload Photo
+            <input
+              type="file"
+              hidden
+              onChange={(e) => setPhoto(e.target.files[0])}
+            />
+          </Button>
+          {photo && <Typography variant="body2" sx={{ mt: 1 }}>{photo.name}</Typography>}
           <Button
             type="submit"
             fullWidth
