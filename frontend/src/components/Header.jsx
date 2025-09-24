@@ -1,17 +1,18 @@
-import React, { useState, useContext } from 'react'; // Import useContext
-import { AppBar, Toolbar, Typography, Button, IconButton, Menu, MenuItem, Box, Badge } from '@mui/material'; // Import Badge
+import React, { useState, useContext } from 'react';
+import { AppBar, Toolbar, Typography, Button, IconButton, Menu, MenuItem, Box, Badge, Avatar } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { useAuth } from '../contexts/AuthContext'; // Using useAuth to get user and logout
-import { CartContext } from '../contexts/CartContext'; // Import CartContext
+import { useAuth } from '../contexts/AuthContext';
+import { CartContext } from '../contexts/CartContext';
+import getImageUrl from '../utils/getImageUrl';
 
 const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
-  const { user, logout } = useAuth(); // Get user and logout from AuthContext
-  const { getCartItemCount } = useContext(CartContext); // Get cart item count
+  const { user, logout } = useAuth();
+  const { getCartItemCount } = useContext(CartContext);
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
 
@@ -26,7 +27,6 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     handleClose();
-    navigate('/');
   };
   
   const handleNavigate = (path) => {
@@ -59,7 +59,9 @@ const Header = () => {
                 onClick={handleMenu}
                 color="inherit"
               >
-                <AccountCircle />
+                <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.email} sx={{ width: 32, height: 32 }}>
+                  {!user.photo_url && <AccountCircle />}
+                </Avatar>
               </IconButton>
               <Menu
                 anchorEl={anchorEl}

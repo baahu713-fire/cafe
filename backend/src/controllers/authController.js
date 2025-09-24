@@ -2,13 +2,18 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    // Ensure team_id is correctly passed from the request, if available
     const { email, password, role, team_id } = req.body;
-    const user = await authService.registerUser({ email, password, role, team_id });
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'A profile photo is required.' });
+    }
+
+    const photo_url = `/uploads/${req.file.filename}`;
+    const user = await authService.registerUser({ email, password, role, team_id, photo_url });
+
     res.status(201).json(user);
   } catch (error) {
-    // Check for unique constraint violation (e.g., email already exists)
-    if (error.code === '23505') { // PostgreSQL unique violation error code
+    if (error.code === '23505') { 
       return res.status(409).json({ message: 'Email already in use.' });
     }
     res.status(500).json({ message: error.message });

@@ -4,9 +4,10 @@ import { settleAllUserOrders } from '../../services/orderService';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
   Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, 
-  DialogContentText, DialogTitle, TablePagination, TextField
+  DialogContentText, DialogTitle, TablePagination, TextField, Avatar
 } from '@mui/material';
 import { debounce } from 'lodash';
+import getImageUrl from '../../utils/getImageUrl';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -105,7 +106,7 @@ const UserManagement = () => {
         <Table stickyHeader aria-label="user management table">
           <TableHead>
             <TableRow>
-              <TableCell>User Email</TableCell>
+              <TableCell>User</TableCell>
               <TableCell>Delivered Orders</TableCell>
               <TableCell>Total Order Value</TableCell>
               <TableCell align="right">Actions</TableCell>
@@ -114,7 +115,12 @@ const UserManagement = () => {
           <TableBody>
             {users.map((user) => (
               <TableRow hover key={user.id}>
-                <TableCell component="th" scope="row">{user.email}</TableCell>
+                <TableCell component="th" scope="row">
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.email} sx={{ width: 32, height: 32, mr: 2 }} />
+                    {user.email}
+                  </Box>
+                </TableCell>
                 <TableCell>{user.order_count}</TableCell>
                 <TableCell>₹{parseFloat(user.total_order_price || 0).toFixed(2)}</TableCell>
                 <TableCell align="right">

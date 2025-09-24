@@ -11,13 +11,15 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -27,15 +29,13 @@ const LoginPage = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const result = await onLogin(email, password);
-
-    setLoading(false);
-
-    if (result.success) {
-      // Redirect to the page the user came from, or to the home page.
+    try {
+      await login(email, password);
       navigate(from, { replace: true });
-    } else {
-      setError(result.message || 'Invalid email or password. Please try again.');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

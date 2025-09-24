@@ -24,8 +24,10 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ItemForm from './ItemForm';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 
-const MenuManagement = ({ user }) => {
+const MenuManagement = () => { // Remove user prop
+    const { user } = useAuth(); // Get user from AuthContext
     const {
         menuItems,
         loading,

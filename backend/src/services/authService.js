@@ -5,12 +5,12 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
 
 const registerUser = async (userData) => {
-  const { email, password, role, team_id } = userData;
+  const { email, password, role, team_id, photo_url } = userData;
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const { rows } = await db.query(
-    'INSERT INTO users (email, hashed_password, role, team_id) VALUES ($1, $2, $3, $4) RETURNING id, email, role, team_id, is_active',
-    [email, hashedPassword, role, team_id]
+    'INSERT INTO users (email, hashed_password, role, team_id, photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, team_id, photo_url, is_active',
+    [email, hashedPassword, role, team_id, photo_url]
   );
   
   const user = rows[0];

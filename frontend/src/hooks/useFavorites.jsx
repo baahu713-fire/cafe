@@ -1,20 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 const FavoritesContext = createContext();
 
 export const useFavorites = () => useContext(FavoritesContext);
 
-export const FavoritesProvider = ({ children, user }) => {
-    const [favorites, setFavorites] = useState(() => {
-        try {
-            const savedFavorites = localStorage.getItem(`favorites_${user?.id}`);
-            return savedFavorites ? JSON.parse(savedFavorites) : [];
-        } catch (error) {
-            console.error("Error parsing favorites from localStorage", error);
-            return [];
-        }
-    });
+// The user prop is removed from the function signature
+export const FavoritesProvider = ({ children }) => {
+    const { user } = useAuth(); // Get user from AuthContext
+    const [favorites, setFavorites] = useState([]);
 
+    // Effect to load favorites from localStorage when user changes
+    useEffect(() => {
+        if (user) {
+            try {
+                const savedFavorites = localStorage.getItem(`favorites_${user.id}`);
+                setFavorites(savedFavorites ? JSON.parse(savedFavorites) : []);
+            } catch (error) {
+                console.error("Error parsing favorites from localStorage", error);
+                setFavorites([]);
+            }
+        } else {
+            // If there is no user, clear the favorites
+            setFavorites([]);
+        }
+    }, [user]);
+
+    // Effect to save favorites to localStorage when they change
     useEffect(() => {
         if (user) {
             localStorage.setItem(`favorites_${user.id}`, JSON.stringify(favorites));

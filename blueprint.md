@@ -2,37 +2,26 @@
 
 ## Overview
 
-This document outlines the architecture and features of the Food Ordering PWA. The application is a progressive web app built with React for the frontend and a Node.js/Express backend.
+This document outlines the architecture and features of the restaurant ordering application.
 
 ## Features
 
-### Core Features
+### Implemented
 
-*   **User Authentication:** Users can register, log in, and log out. Admins have a separate login and dashboard.
-*   **Menu Management:** Admins can add, edit, and delete menu items.
-*   **Order Management:** Users can place orders, view their order history, and cancel recent orders. Admins can manage all orders, update their status, and settle user accounts.
-*   **Shopping Cart:** Users can add items to their cart and checkout.
-*   **Favorites:** Users can mark items as favorites for easy reordering.
-*   **Feedback:** Users can leave feedback and a rating on their orders.
-*   **Order Dispute:** Users can dispute an order from their "My Orders" page.
-*   **Dispute Visibility:** Admins can see which orders have been disputed in the "Manage Orders" dashboard.
+*   **User Authentication:** Users can register and log in to the application.
+*   **Menu:** Users can view the restaurant's menu.
+*   **Shopping Cart:** Users can add items to their cart and place orders.
+*   **Order History:** Users can view their past orders.
+*   **Favorites:** Users can mark items as favorites.
+*   **Admin Panel:** Administrators can manage menu items, users, and orders.
+*   **Photo and Team Selection:** Users can upload a profile photo and select a team during registration.
+*   **Mandatory Photo Upload:** Photo upload is now required for user registration.
+*   **Admin Order User Search:** Administrators can search for users by email when placing an order on their behalf from the cart page.
+*   **Enhanced Admin Order View:** The "Manage Orders" section in the admin dashboard now displays the username and email for each order, with search functionality for these fields.
 
-### New Features
+### Fixes
 
-*   **Dockerization:** The entire application is now containerized with Docker and can be run with Docker Compose.
-
-## Technical Details
-
-*   **Frontend:** React, Material-UI, Nginx
-*   **Backend:** Node.js, Express, PostgreSQL
-*   **Authentication:** JWT
-*   **Containerization:** Docker, Docker Compose
-
-## Current Task: Dockerize the Application
-
-*   **Objective:** Containerize the frontend and backend applications to run with Docker Compose.
-*   **Steps Taken:**
-    1.  Created a `Dockerfile` for the backend Node.js application.
-    2.  Created a `Dockerfile` for the frontend React application, using a multi-stage build with Nginx.
-    3.  Added an `nginx.conf` file to the frontend to proxy API requests.
-    4.  Created a `docker-compose.yml` file to define and link the `frontend`, `backend`, and `db` services.
+*   **Registration Page Refresh Loop:** Fixed a bug where the registration page would continuously refresh due to a failed attempt to fetch the list of teams. The route for fetching teams was incorrectly protected by authentication middleware, which has now been removed.
+*   **Large File Upload Error Handling:** Implemented graceful error handling for large file uploads on the registration page. The backend now sends a specific error message, which is displayed to the user on the frontend.
+*   **Item Availability Display:** The menu now accurately reflects item availability. Unavailable items are visually disabled with a vintage look, and the "Add to Cart" button is disabled, preventing users from adding out-of-stock items to their cart.
+*   **Reordering with Outdated Prices:** Fixed a bug where reordering an item would use the historical price from the original order instead of the current price. The reorder logic now fetches the latest item details from the menu to ensure accurate pricing and availability.

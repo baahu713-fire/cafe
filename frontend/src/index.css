@@ -66,3 +66,34 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+div#root {
+  position: absolute;
+  top: 0px;
+  background: #fcf4f4;
+}
+header.MuiPaper-root.MuiPaper-elevation.MuiPaper-elevation4.MuiAppBar-root.MuiAppBar-colorPrimary.MuiAppBar-positionSticky.css-1uj80dc-MuiPaper-root-MuiAppBar-root {
+  width: 99vw;
+}
+/* .MuiSelect-select.MuiSelect-outlined.MuiInputBase-input.MuiOutlinedInput-input.css-1bw8zak-MuiNativeSelect-root-MuiSelect-select-MuiInputBase-input-MuiOutlinedInput-input {
+  width: 10vw;
+} */
+.MuiInputBase-root.MuiOutlinedInput-root.MuiInputBase-colorPrimary.MuiInputBase-fullWidth.MuiInputBase-formControl.MuiInputBase-adornedStart.css-zv8ltm-MuiInputBase-root-MuiOutlinedInput-root {
+  width: 46vw;
+}
+button.MuiButtonBase-root.MuiButton-root.MuiButton-contained.MuiButton-containedError.MuiButton-sizeMedium.MuiButton-containedSizeMedium.MuiButton-colorError.MuiButton-root.MuiButton-contained.MuiButton-containedError.MuiButton-sizeMedium.MuiButton-containedSizeMedium.MuiButton-colorError.css-loemht-MuiButtonBase-root-MuiButton-root {
+  display: none;
+}
+/* to fix the card width if content added it not expand */
+.MuiGrid-root.MuiGrid-direction-xs-row.css-17fpwt7-MuiGrid-root {
+  width: 14vw;
+}
+p.MuiTypography-root.MuiTypography-body2.css-10vp8bw-MuiTypography-root {
+  max-height: 10vh;
+  overflow-y: auto;
+}
+.MuiFormControl-root.MuiFormControl-fullWidth.css-ytlejw-MuiFormControl-root {
+  position: relative;
+  width: 13vw;
+  left: 32vw;
+}

@@ -11,6 +11,7 @@ import {
 import MenuManagement from '../components/admin/MenuManagement';
 import OrderManagement from '../components/admin/OrderManagement';
 import UserManagement from '../components/admin/UserManagement';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -32,7 +33,8 @@ function TabPanel(props) {
   );
 }
 
-const AdminPage = ({ user }) => {
+const AdminPage = () => { // Remove user prop
+  const { user } = useAuth(); // Get user from AuthContext
   const [value, setValue] = useState(0);
 
   if (!user || !user.isAdmin) {
@@ -62,7 +64,7 @@ const AdminPage = ({ user }) => {
           <OrderManagement />
         </TabPanel>
         <TabPanel value={value} index={1}>
-          <MenuManagement user={user} />
+          <MenuManagement />
         </TabPanel>
         <TabPanel value={value} index={2}>
           <UserManagement />

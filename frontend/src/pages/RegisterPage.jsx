@@ -15,8 +15,9 @@ import {
   FormControl
 } from '@mui/material';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
-const RegisterPage = ({ onRegister }) => {
+const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +26,7 @@ const RegisterPage = ({ onRegister }) => {
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
   const [error, setError] = useState('');
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,22 +50,21 @@ const RegisterPage = ({ onRegister }) => {
       return;
     }
 
+    if (!photo) {
+      setError('A profile photo is required.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', name);
     formData.append('email', email);
     formData.append('password', password);
     formData.append('team_id', teamId);
-    if (photo) {
-      formData.append('photo', photo);
-    }
+    formData.append('photo', photo);
 
     try {
-      const result = await onRegister(formData);
-      if (result.success) {
-        navigate('/'); // Redirect to home on successful registration
-      } else {
-        setError(result.message || 'Failed to create an account.');
-      }
+      await signup(formData);
+      navigate('/');
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
@@ -160,10 +161,12 @@ const RegisterPage = ({ onRegister }) => {
             fullWidth
             sx={{ mt: 2 }}
           >
-            Upload Photo
+            Upload Photo*
             <input
               type="file"
+              required
               hidden
+              accept="image/*"
               onChange={(e) => setPhoto(e.target.files[0])}
             />
           </Button>

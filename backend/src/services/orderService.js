@@ -97,6 +97,9 @@ const getOrderById = async (orderId, user) => {
     const query = `
         SELECT 
             o.*,
+            u.name as user_name,
+            u.email as user_email,
+            u.photo_url as user_photo_url,
             COALESCE(
                 (
                     SELECT json_agg(oi.*)
@@ -109,6 +112,7 @@ const getOrderById = async (orderId, user) => {
                 LIMIT 1
             ) as feedback
         FROM orders o
+        JOIN users u ON o.user_id = u.id
         WHERE o.id = $1 ${userClause}
     `;
 
@@ -131,6 +135,9 @@ const getOrdersByUserId = async (userId, page, limit) => {
     const ordersQuery = `
         SELECT 
             o.*,
+            u.name as user_name,
+            u.email as user_email,
+            u.photo_url as user_photo_url,
             COALESCE((
                 SELECT json_agg(oi.*) 
                 FROM order_items oi WHERE oi.order_id = o.id
@@ -141,6 +148,7 @@ const getOrdersByUserId = async (userId, page, limit) => {
                 LIMIT 1
             ) as feedback
         FROM orders o
+        JOIN users u ON o.user_id = u.id
         WHERE o.user_id = $1
         ORDER BY o.created_at DESC
         LIMIT $2 OFFSET $3;
@@ -160,6 +168,9 @@ const getAllOrders = async (page, limit) => {
     const ordersQuery = `
         SELECT 
             o.*, 
+            u.name as user_name,
+            u.email as user_email,
+            u.photo_url as user_photo_url,
             COALESCE((
                 SELECT json_agg(oi.*) 
                 FROM order_items oi WHERE oi.order_id = o.id
@@ -170,6 +181,7 @@ const getAllOrders = async (page, limit) => {
                 LIMIT 1
             ) as feedback
         FROM orders o
+        JOIN users u ON o.user_id = u.id
         ORDER BY o.created_at DESC
         LIMIT $1 OFFSET $2;
     `;

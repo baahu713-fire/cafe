@@ -4,8 +4,9 @@ import { ORDER_STATUS } from '../../constants/orderStatus';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, 
-  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip
+  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip, Avatar
 } from '@mui/material';
+import getImageUrl from '../../utils/getImageUrl';
 
 const OrderDetailsDialog = ({ order, open, onClose }) => {
     if (!order) return null;
@@ -164,7 +165,8 @@ const OrderManagement = () => {
         const searchTermLower = searchTerm.toLowerCase();
         return (
           order.id.toString().includes(searchTermLower) ||
-          order.user_id.toString().includes(searchTermLower) ||
+          order.user_name.toLowerCase().includes(searchTermLower) ||
+          order.user_email.toLowerCase().includes(searchTermLower) ||
           order.status.toLowerCase().includes(searchTermLower)
         );
       })
@@ -197,7 +199,7 @@ const OrderManagement = () => {
       <Typography variant="h5" gutterBottom>Manage All Orders</Typography>
       <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
         <TextField
-          label="Search by ID, User ID, or Status"
+          label="Search by ID, User, or Status"
           variant="outlined"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -220,7 +222,7 @@ const OrderManagement = () => {
           <TableHead>
             <TableRow>
               <TableCell>Order ID</TableCell>
-              <TableCell>User ID</TableCell>
+              <TableCell>User</TableCell>
               <TableCell>Order Date</TableCell>
               <TableCell>Total Price</TableCell>
               <TableCell>Status</TableCell>
@@ -232,7 +234,15 @@ const OrderManagement = () => {
             {filteredOrders.map((order) => (
               <TableRow hover key={order.id}>
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
-                <TableCell>{order.user_id}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Avatar src={getImageUrl(order.user_photo_url)} alt={order.user_name} sx={{ width: 32, height: 32, mr: 2 }} />
+                    <div>
+                      <Typography variant="body2">{order.user_name}</Typography>
+                      <Typography variant="caption" color="text.secondary">{order.user_email}</Typography>
+                    </div>
+                  </Box>
+                </TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleString()}</TableCell>
                 <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
                 <TableCell>

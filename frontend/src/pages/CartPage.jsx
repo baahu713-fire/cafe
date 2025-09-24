@@ -18,14 +18,17 @@ import {
     FormControl,
     InputLabel,
     Select,
-    MenuItem
+    MenuItem,
+    Autocomplete
 } from '@mui/material';
 import { Add, Remove, Delete } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 import useUsers from '../hooks/useUsers';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
-const CartPage = ({ user }) => {
+const CartPage = () => { // Remove user prop
+    const { user } = useAuth(); // Get user from AuthContext
     const {
         cart,
         updateQuantity,
@@ -39,7 +42,7 @@ const CartPage = ({ user }) => {
     } = useCart();
 
     const [comment, setComment] = useState('');
-    const [selectedUser, setSelectedUser] = useState('');
+    const [selectedUser, setSelectedUser] = useState(null);
     const { users } = useUsers(user);
     const navigate = useNavigate();
     const location = useLocation();
@@ -64,7 +67,7 @@ const CartPage = ({ user }) => {
                 alert('Please select a user to place the order for.');
                 return;
             }
-            placeOrder(comment, selectedUser);
+            placeOrder(comment, selectedUser ? selectedUser.id : null);
         }
     };
     
@@ -135,24 +138,21 @@ const CartPage = ({ user }) => {
                     </TableContainer>
                     <Box sx={{ mt: 4, textAlign: 'right' }}>
                         {user && user.isAdmin && (
-                            <FormControl fullWidth sx={{ my: 2 }}>
-                                <InputLabel id="user-select-label">Place Order For</InputLabel>
-                                <Select
-                                    labelId="user-select-label"
-                                    value={selectedUser}
-                                    label="Place Order For"
-                                    onChange={(e) => setSelectedUser(e.target.value)}
-                                >
-                                    <MenuItem value="">
-                                        <em>Select a user</em>
-                                    </MenuItem>
-                                    {users.map((user) => (
-                                        <MenuItem key={user.id} value={user.id}>
-                                            {user.email}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <Autocomplete
+                                options={users}
+                                getOptionLabel={(option) => option.email}
+                                onChange={(event, newValue) => {
+                                    setSelectedUser(newValue);
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Place Order For"
+                                        variant="outlined"
+                                    />
+                                )}
+                                sx={{ my: 2 }}
+                            />
                         )}
                         <Typography variant="h5">Subtotal ({itemCount} items): ₹{totalPrice.toFixed(2)}</Typography>
                         <TextField

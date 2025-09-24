@@ -17,8 +17,12 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import MenuIcon from '@mui/icons-material/Menu';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../hooks/useCart';
 
-const AppNav = ({ user, onLogout, cartItemCount }) => {
+const AppNav = () => {
+  const { user, logout } = useAuth();
+  const { itemCount } = useCart();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
 
@@ -38,6 +42,11 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
     setMobileMoreAnchorEl(null);
   };
 
+  const handleLogout = () => {
+    logout();
+    handleMenuClose();
+  };
+
   const renderMenu = (
     <Menu
       anchorEl={anchorEl}
@@ -48,7 +57,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
     >
-      <MenuItem onClick={() => { onLogout(); handleMenuClose(); }}>Logout</MenuItem>
+      <MenuItem onClick={handleLogout}>Logout</MenuItem>
     </Menu>
   );
 
@@ -77,7 +86,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
       </MenuItem>
       <MenuItem component={RouterLink} to="/cart" onClick={handleMenuClose}>
         <IconButton size="large" aria-label="shopping cart" color="inherit">
-          <Badge badgeContent={cartItemCount} color="error">
+          <Badge badgeContent={itemCount} color="error">
             <ShoppingCartIcon />
           </Badge>
         </IconButton>
@@ -153,7 +162,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
                     <FavoriteIcon />
                   </IconButton>
                   <IconButton component={RouterLink} to="/cart" color="inherit">
-                    <Badge badgeContent={cartItemCount} color="primary">
+                    <Badge badgeContent={itemCount} color="primary">
                       <ShoppingCartIcon />
                     </Badge>
                   </IconButton>
@@ -172,7 +181,7 @@ const AppNav = ({ user, onLogout, cartItemCount }) => {
                     <FavoriteIcon />
                   </IconButton>
                   <IconButton component={RouterLink} to="/cart" color="inherit">
-                    <Badge badgeContent={cartItemCount} color="primary">
+                    <Badge badgeContent={itemCount} color="primary">
                       <ShoppingCartIcon />
                     </Badge>
                   </IconButton>

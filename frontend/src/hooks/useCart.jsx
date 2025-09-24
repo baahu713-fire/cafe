@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import { placeOrder as placeOrderService } from '../services/orderService';
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
-const CartProvider = ({ children, user }) => {
+// The user prop is removed from the function signature
+const CartProvider = ({ children }) => {
+    const { user } = useAuth(); // Get user from AuthContext
+
     // Utility to sanitize cart items, ensuring prices are numbers
     const sanitizeCart = (cartItems) => {
         if (!Array.isArray(cartItems)) return [];
@@ -45,12 +49,9 @@ const CartProvider = ({ children, user }) => {
     const [orderError, setOrderError] = useState(null);
     const [orderSuccess, setOrderSuccess] = useState(false);
 
-    // The 'Standard' name is a client-side placeholder for items without proportions.
-    // It should not be sent to the backend.
     const getCartItemId = (item) => `${item.id}-${item.proportion?.name || 'Standard'}`;
 
     const addToCart = useCallback((item, quantity = 1) => {
-        // FIX: Reset status from previous orders when adding a new item
         setOrderSuccess(false);
         setOrderError(null);
 
@@ -62,7 +63,7 @@ const CartProvider = ({ children, user }) => {
 
             if (isNaN(numericPrice)) {
                 console.error("Attempted to add an item with an invalid price:", item);
-                return prevCart; // Do not add item if price is invalid
+                return prevCart;
             }
 
             if (existingItem) {

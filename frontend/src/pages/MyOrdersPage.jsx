@@ -5,6 +5,9 @@ import { submitFeedback } from '../services/feedbackService';
 import FeedbackForm from '../components/FeedbackForm';
 import { ORDER_STATUS } from '../constants/orderStatus';
 import { useCart } from '../hooks/useCart';
+import useMenu from '../hooks/useMenu';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
+
 import {
   Container,
   Paper,
@@ -169,7 +172,8 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder
   );
 };
 
-const MyOrdersPage = ({ user }) => {
+const MyOrdersPage = () => { // Remove user prop
+  const { user } = useAuth(); // Get user from AuthContext
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -179,6 +183,7 @@ const MyOrdersPage = ({ user }) => {
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { menuItems, loading: menuLoading, error: menuError } = useMenu();
 
   const fetchOrders = useCallback(async (currentPage) => {
     setLoading(true);
@@ -198,8 +203,10 @@ const MyOrdersPage = ({ user }) => {
   }, [navigate]);
 
   useEffect(() => {
-    fetchOrders(1);
-  }, [fetchOrders]);
+    if (user) { // Only fetch orders if there is a user
+        fetchOrders(1);
+    }
+  }, [fetchOrders, user]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
@@ -246,24 +253,69 @@ const MyOrdersPage = ({ user }) => {
   };
 
   const handleReorder = async (order) => {
-    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
-        setError("This order has no items available to reorder.");
-        return;
+    if (menuLoading) {
+      setError("Menu data is loading, please wait a moment before reordering.");
+      return;
     }
 
+    if (menuError) {
+      setError("Could not load menu data. Please try again later.");
+      return;
+    }
+
+    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+      setError("This order has no items available to reorder.");
+      return;
+    }
+
+    const unavailableItems = [];
+    let itemsAdded = 0;
+
     try {
-      for (const item of order.items) {
-        const reorderItem = {
-          id: item.menu_item_id, // Correctly use menu_item_id
-          name: item.name_at_order,
-          price: parseFloat(item.price_at_order),
-        };
-        await addToCart(reorderItem, item.quantity);
+      for (const orderedItem of order.items) {
+        const currentMenuItem = menuItems.find(menuItem => menuItem.id === orderedItem.menu_item_id);
+
+        if (currentMenuItem && currentMenuItem.available) {
+          const itemForCart = {
+            ...currentMenuItem,
+            price: parseFloat(currentMenuItem.price),
+          };
+
+          if (orderedItem.proportion_name && orderedItem.proportion_name !== 'Standard') {
+            const currentProportion = currentMenuItem.proportions?.find(p => p.name === orderedItem.proportion_name);
+
+            if (currentProportion) {
+              itemForCart.proportion = {
+                ...currentProportion,
+                price: parseFloat(currentProportion.price)
+              };
+            } else {
+              unavailableItems.push(`${orderedItem.name_at_order} (${orderedItem.proportion_name})`);
+              continue;
+            }
+          }
+
+          await addToCart(itemForCart, orderedItem.quantity);
+          itemsAdded++;
+
+        } else {
+          unavailableItems.push(orderedItem.name_at_order);
+        }
       }
-      navigate('/cart');
+
+      if (unavailableItems.length > 0) {
+        setError(`Some items are unavailable and were not added to your cart: ${unavailableItems.join(', ')}.`);
+      }
+
+      if (itemsAdded > 0) {
+        navigate('/cart');
+      } else {
+        setError("None of the items from this order are currently available.");
+      }
+
     } catch (err) {
       console.error("Reorder failed:", err);
-      setError('Failed to add items to cart. Please try again.');
+      setError('An unexpected error occurred while adding items to the cart. Please try again.');
     }
   };
 
