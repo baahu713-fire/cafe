@@ -1,0 +1,19 @@
+# Use an official Node.js runtime as a parent image
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm install --omit=dev
+
+# Copy the rest of the application source code
+COPY . .
+
+# The app binds to port 5000
+EXPOSE 5000
+
+# Run the app with the node command
+CMD ["node", "src/server.js"]

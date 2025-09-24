@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "5000:5000"
+    secrets:
+      - db_url
+    environment:
+      # Read the database URL from the Docker secret file
+      DATABASE_URL_FILE: /run/secrets/db_url
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+# Define the secret to be used
+secrets:
+  db_url:
+    # This tells Docker to look for a file named 'db_url.txt' in the same
+    # directory where you run the docker-compose command. You will create this
+    # file on your in-house server.
+    file: ./db_url.txt
