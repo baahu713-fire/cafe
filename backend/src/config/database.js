@@ -20,13 +20,14 @@ if (fs.existsSync('/run/secrets/db_user')) {
   const dbUser = readSecret('db_user');
   const dbPassword = readSecret('db_password');
   const dbName = readSecret('db_name');
+  const dbPort = 6532;
 
   if (!dbUser || !dbPassword || !dbName) {
     throw new Error('One or more database secrets are missing or could not be read.');
   }
 
   // Construct the connection string to connect to the database on the Docker host.
-  const connectionString = `postgres://${dbUser}:${dbPassword}@host.docker.internal:5432/${dbName}`;
+  const connectionString = `postgres://${dbUser}:${dbPassword}@host.docker.internal:${dbPort}/${dbName}`;
 
   pool = new Pool({
     connectionString: connectionString,

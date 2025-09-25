@@ -84,7 +84,7 @@ header.MuiPaper-root.MuiPaper-elevation.MuiPaper-elevation4.MuiAppBar-root.MuiAp
 button.MuiButtonBase-root.MuiButton-root.MuiButton-contained.MuiButton-containedError.MuiButton-sizeMedium.MuiButton-containedSizeMedium.MuiButton-colorError.MuiButton-root.MuiButton-contained.MuiButton-containedError.MuiButton-sizeMedium.MuiButton-containedSizeMedium.MuiButton-colorError.css-loemht-MuiButtonBase-root-MuiButton-root {
   display: none;
 }
-/* to fix the card width if content added it not expand */
+/* to fix the card width if content added it not expand  */
 .MuiGrid-root.MuiGrid-direction-xs-row.css-17fpwt7-MuiGrid-root {
   width: 14vw;
 }

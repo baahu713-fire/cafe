@@ -1,4 +1,14 @@
 version: '3.8'
+
+# Define the secrets to be read from files on the host.
+secrets:
+  db_user:
+    file: ./db_user.txt
+  db_password:
+    file: ./db_password.txt
+  db_name:
+    file: ./db_name.txt
+
 services:
   backend:
     build:
@@ -6,11 +16,14 @@ services:
       dockerfile: Dockerfile.prod
     ports:
       - "5000:5000"
+    # This ensures the container can reach the host machine's services.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Mount the secrets as files into the container at /run/secrets/
     secrets:
-      - db_url
-    environment:
-      # Read the database URL from the Docker secret file
-      DATABASE_URL_FILE: /run/secrets/db_url
+      - db_user
+      - db_password
+      - db_name
 
   frontend:
     build:
@@ -20,11 +33,3 @@ services:
       - "80:80"
     depends_on:
       - backend
-
-# Define the secret to be used
-secrets:
-  db_url:
-    # This tells Docker to look for a file named 'db_url.txt' in the same
-    # directory where you run the docker-compose command. You will create this
-    # file on your in-house server.
-    file: ./db_url.txt
