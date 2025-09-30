@@ -120,6 +120,7 @@ const MenuItemCard = ({ item }) => {
             backgroundColor: !isAvailable ? '#f5f5f5' : '#fff', // Vintage-style background for unavailable items
             opacity: !isAvailable ? 0.6 : 1,
             transition: 'opacity 0.3s ease-in-out',
+             width:'14vw',
         }}>
             <Box sx={{ position: 'relative' }}>
                 <CardMedia

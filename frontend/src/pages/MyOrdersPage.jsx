@@ -75,14 +75,14 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder
     <Accordion sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' } }}>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Grid container alignItems="center" spacing={2} sx={{ flexGrow: 1 }}>
-            <Grid item xs={12} sm={2}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
-            <Grid item xs={12} sm={3}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
-            <Grid item xs={6} sm={2}>
+            <Grid item xs={12} sm={2} style={{width:'10vw'}}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
+            <Grid item xs={12} sm={3} style={{width:'10vw'}}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
+            <Grid item xs={6} sm={2} style={{width:'10vw'}}>
                 <StatusChip status={order.status} />
                 {order.disputed && <Chip label="Disputed" color="error" size="small" sx={{ ml: 1, fontWeight: 'bold' }} />}
             </Grid>
-            <Grid item xs={6} sm={2}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
-            <Grid item xs={12} sm={3}>
+            <Grid item xs={6} sm={2} style={{width:'10vw'}}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
+            <Grid item xs={12} sm={3} style={{width:'10vw'}}>
                 {order.feedback ? (
                     <Rating value={order.feedback.rating} readOnly size="small" />
                 ) : canLeaveFeedback ? (
@@ -357,7 +357,7 @@ const MyOrdersPage = () => { // Remove user prop
                         }}
                     />
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={4} style={{width:'10vw'}}>
                     <FormControl fullWidth variant="outlined">
                         <InputLabel>Status</InputLabel>
                         <Select
