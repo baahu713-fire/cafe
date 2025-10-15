@@ -44,6 +44,7 @@ const MenuManagement = () => { // Remove user prop
     const [itemToDelete, setItemToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [formError, setFormError] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (user && user.isAdmin) {
@@ -55,26 +56,24 @@ const MenuManagement = () => { // Remove user prop
     const handleFormOpen = (item = null) => {
         setFormError('');
         if (item) {
-            const itemToEdit = JSON.parse(JSON.stringify(item));
-            const initialProportions = itemToEdit.proportions && itemToEdit.proportions.length > 0 
-                ? itemToEdit.proportions 
-                : [];
-
-            let initialAvailability = [];
-            if (Array.isArray(itemToEdit.availability)) {
-                initialAvailability = itemToEdit.availability;
-            } else if (typeof itemToEdit.availability === 'string' && itemToEdit.availability) {
-                initialAvailability = itemToEdit.availability.split(',').map(s => s.trim());
+            // Preserve the original image data when editing
+            const proportions = item.proportions && item.proportions.length > 0 ? item.proportions : [];
+            let availability = [];
+            if (Array.isArray(item.availability)) {
+                availability = item.availability;
+            } else if (typeof item.availability === 'string' && item.availability) {
+                availability = item.availability.split(',').map(s => s.trim());
             }
 
-            setCurrentItem({ ...itemToEdit, proportions: initialProportions, availability: initialAvailability });
+            setCurrentItem({ ...item, proportions, availability, image: null }); // Set image to null initially
         } else {
-            setCurrentItem({ name: '', price: '', image: '', description: '', availability: [], proportions: [], available: true });
+            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true });
         }
         setFormOpen(true);
     };
 
     const handleFormClose = () => {
+        if (isSaving) return; // Prevent closing while saving
         setFormOpen(false);
         setCurrentItem(null);
         setFormError('');
@@ -97,26 +96,34 @@ const MenuManagement = () => { // Remove user prop
             return;
         }
 
+        setIsSaving(true);
         try {
-            const proportionsWithNumericPrices = currentItem.proportions.map(p => ({ 
-                ...p, 
-                price: parseFloat(p.price) 
-            }));
+            const formData = new FormData();
+            formData.append('name', currentItem.name);
+            formData.append('price', parseFloat(currentItem.price));
+            formData.append('description', currentItem.description);
+            formData.append('available', currentItem.available);
+            
+            if (currentItem.image) {
+                formData.append('image', currentItem.image);
+            }
 
-            const itemToSave = {
-                ...currentItem,
-                price: parseFloat(currentItem.price),
-                proportions: proportionsWithNumericPrices
-            };
+            (currentItem.availability || []).forEach(a => formData.append('availability[]', a));
+            if (currentItem.proportions && currentItem.proportions.length > 0) {
+                formData.append('proportions', JSON.stringify(currentItem.proportions));
+            }
 
-            if (itemToSave.id) {
-                await updateMenuItem(itemToSave.id, itemToSave);
+
+            if (currentItem.id) {
+                await updateMenuItem(currentItem.id, formData);
             } else {
-                await addMenuItem(itemToSave);
+                await addMenuItem(formData);
             }
             handleFormClose();
         } catch (err) {
             setFormError(err.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -141,6 +148,8 @@ const MenuManagement = () => { // Remove user prop
         setDeleteConfirmOpen(false);
         setItemToDelete(null);
     };
+
+
 
     const filteredMenu = useMemo(() => {
         if (!menuItems) return [];
@@ -169,10 +178,11 @@ const MenuManagement = () => { // Remove user prop
             />
             <TableContainer component={Paper} sx={{ borderRadius: '16px' }}>
                 <Table>
-                    <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Description</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
+                    <TableHead><TableRow><TableCell>Image</TableCell><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Description</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
                     <TableBody>
                         {filteredMenu.map(item => (
                             <TableRow key={item.id}> 
+                                <TableCell><img src={item.image_data} alt={item.name} height="50" /></TableCell>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell>₹{item.price}</TableCell>
                                 <TableCell>{Array.isArray(item.availability) ? item.availability.join(', ') : (item.availability || 'N/A')}</TableCell>
@@ -193,7 +203,8 @@ const MenuManagement = () => { // Remove user prop
                     currentItem={currentItem} 
                     setCurrentItem={setCurrentItem} 
                     handleSave={handleSave} 
-                    formError={formError} 
+                    formError={formError}
+                    isSaving={isSaving} 
                 />
             )}
             <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>

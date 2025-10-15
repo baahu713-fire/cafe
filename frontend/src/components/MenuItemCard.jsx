@@ -126,7 +126,7 @@ const MenuItemCard = ({ item }) => {
                 <CardMedia
                     component="img"
                     height="140"
-                    image={item.image || 'https://via.placeholder.com/150'}
+                    image={item.image_data || 'https://via.placeholder.com/150'}
                     alt={item.name}
                 />
                 <IconButton 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogActions,
@@ -14,13 +14,34 @@ import {
   FormControlLabel,
   Checkbox,
   FormLabel,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { AVAILABILITY_OPTIONS } from '../../constants/categories';
 
-const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, formError }) => {
+const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, formError, isSaving }) => {
+    const [imagePreview, setImagePreview] = useState(null);
+
+    useEffect(() => {
+        if (currentItem?.image) {
+            setImagePreview(URL.createObjectURL(currentItem.image));
+        } else if (currentItem?.image_data) {
+            setImagePreview(currentItem.image_data);
+        } else {
+            setImagePreview(null);
+        }
+    }, [currentItem]);
+
+    const handleImageChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setCurrentItem(prev => ({ ...prev, image: file, image_data: null }));
+        } else {
+            setCurrentItem(prev => ({ ...prev, image: null }));
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -58,11 +79,19 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
             <DialogTitle>{currentItem?.id ? 'Edit Menu Item' : 'Add New Menu Item'}</DialogTitle>
             <DialogContent>
                 {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
-                <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} required/>
-                <TextField margin="dense" name="price" label="Price" type="number" fullWidth variant="outlined" value={currentItem?.price || ''} onChange={handleChange} required />
-                <TextField margin="dense" name="image" label="Image URL" type="text" fullWidth variant="outlined" value={currentItem?.image || ''} onChange={handleChange} />
-                <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} />
-                <FormControl component="fieldset" fullWidth margin="dense">
+                <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} required disabled={isSaving}/>
+                <TextField margin="dense" name="price" label="Price" type="number" fullWidth variant="outlined" value={currentItem?.price || ''} onChange={handleChange} required disabled={isSaving}/>
+                <Button variant="contained" component="label" fullWidth sx={{ my: 1 }} disabled={isSaving}>
+                    Upload Image
+                    <input type="file" hidden accept="image/*" onChange={handleImageChange} />
+                </Button>
+                {imagePreview && (
+                    <Box mt={2} textAlign="center">
+                        <img src={imagePreview} alt="Preview" height="150" />
+                    </Box>
+                )}
+                <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} disabled={isSaving}/>
+                <FormControl component="fieldset" fullWidth margin="dense" disabled={isSaving}>
                     <FormLabel component="legend">Categories</FormLabel>
                     <FormGroup row>
                         {AVAILABILITY_OPTIONS.map(option => (
@@ -75,22 +104,24 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
                     </FormGroup>
                 </FormControl>
                  <FormControlLabel
-                    control={<Checkbox name="available" checked={currentItem?.available ?? false} onChange={handleChange} />}
+                    control={<Checkbox name="available" checked={currentItem?.available ?? false} onChange={handleChange} disabled={isSaving}/>}
                     label="Available for purchase"
                 />
                 <Typography sx={{ mt: 2, mb: 1 }}>Proportions (Optional)</Typography>
                 {currentItem?.proportions?.map((proportion, index) => (
                     <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                        <TextField label="Proportion Name" value={proportion.name} onChange={(e) => handleProportionChange(index, 'name', e.target.value)} required />
-                        <TextField label="Price" type="number" value={proportion.price} onChange={(e) => handleProportionChange(index, 'price', e.target.value)} required />
-                        <IconButton onClick={() => removeProportion(index)}><DeleteIcon /></IconButton>
+                        <TextField label="Proportion Name" value={proportion.name} onChange={(e) => handleProportionChange(index, 'name', e.target.value)} required disabled={isSaving}/>
+                        <TextField label="Price" type="number" value={proportion.price} onChange={(e) => handleProportionChange(index, 'price', e.target.value)} required disabled={isSaving}/>
+                        <IconButton onClick={() => removeProportion(index)} disabled={isSaving}><DeleteIcon /></IconButton>
                     </Box>
                 ))}
-                <Button startIcon={<AddIcon />} onClick={addProportion}>Add Proportion</Button>
+                <Button startIcon={<AddIcon />} onClick={addProportion} disabled={isSaving}>Add Proportion</Button>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained">Save</Button>
+                <Button onClick={handleClose} disabled={isSaving}>Cancel</Button>
+                <Button onClick={handleSave} variant="contained" disabled={isSaving}>
+                    {isSaving ? <CircularProgress size={24} /> : 'Save'}
+                </Button>
             </DialogActions>
         </Dialog>
     );

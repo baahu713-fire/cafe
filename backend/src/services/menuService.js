@@ -1,7 +1,6 @@
 const db = require('../config/database');
 
 const getAllMenuItems = async () => {
-    // Only fetch items that are not soft-deleted
     const { rows } = await db.query('SELECT * FROM menu_items WHERE deleted_from IS NULL ORDER BY name');
     return rows;
 };
@@ -15,28 +14,59 @@ const getMenuItemById = async (itemId) => {
 };
 
 const createMenuItem = async (itemData) => {
-    const { name, description, price, image, availability, proportions, available } = itemData;
+    const { name, description, price, image_data, availability, proportions, available } = itemData;
+
+    const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND deleted_from IS NULL', [name]);
+    if (existing.length > 0) {
+        throw new Error('A menu item with this name already exists.');
+    }
+
     const { rows } = await db.query(
-        'INSERT INTO menu_items (name, description, price, image, availability, proportions, available) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [name, description, price, image, availability, JSON.stringify(proportions), available]
+        'INSERT INTO menu_items (name, description, price, image_data, availability, proportions, available) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [name, description, price, image_data, availability, JSON.stringify(proportions), available]
     );
     return rows[0];
 };
 
 const updateMenuItem = async (itemId, itemData) => {
-    const { name, description, price, image, availability, proportions, available } = itemData;
-    const { rows } = await db.query(
-        `UPDATE menu_items SET 
-            name = $1, 
+    const { name, description, price, image_data, availability, proportions, available } = itemData;
+
+    const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND id != $2 AND deleted_from IS NULL', [name, itemId]);
+    if (existing.length > 0) {
+        throw new Error('A menu item with this name already exists.');
+    }
+
+    const queryParams = [
+        name,
+        description,
+        price,
+        availability,
+        JSON.stringify(proportions),
+        available
+    ];
+
+    let updateQuery = `
+        UPDATE menu_items 
+        SET name = $1, 
             description = $2, 
             price = $3, 
-            image = $4, 
-            availability = $5, 
-            proportions = $6, 
-            available = $7
-        WHERE id = $8 AND deleted_from IS NULL RETURNING *`,
-        [name, description, price, image, availability, JSON.stringify(proportions), available, itemId]
-    );
+            availability = $4, 
+            proportions = $5, 
+            available = $6
+    `;
+
+    if (image_data) {
+        updateQuery += ', image_data = $7';
+        queryParams.push(image_data);
+        queryParams.push(itemId);
+        updateQuery += ' WHERE id = $8 RETURNING *';
+    } else {
+        queryParams.push(itemId);
+        updateQuery += ' WHERE id = $7 RETURNING *';
+    }
+
+    const { rows } = await db.query(updateQuery, queryParams);
+
     if (rows.length === 0) {
         throw new Error('Menu item not found or has been deleted');
     }
@@ -45,7 +75,7 @@ const updateMenuItem = async (itemId, itemData) => {
 
 const softDeleteMenuItem = async (itemId) => {
     const { rows } = await db.query(
-        'UPDATE menu_items SET deleted_from = NOW() WHERE id = $1 AND deleted_from IS NULL RETURNING id',
+        'UPDATE menu_items SET deleted_from = NOW(), available = false WHERE id = $1 AND deleted_from IS NULL RETURNING id',
         [itemId]
     );
     if (rows.length === 0) {

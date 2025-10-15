@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     description TEXT,
     price NUMERIC(10, 2) NOT NULL, -- Base price for items without proportions
     category VARCHAR(100),
-    image_url TEXT, -- URL for the item's image
+    image_data BYTEA, -- Storing image data directly in the database
     is_available BOOLEAN DEFAULT true
 );
 
