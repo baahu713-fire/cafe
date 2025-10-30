@@ -157,7 +157,7 @@ const AppNav = () => {
 
               {user ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography variant="body2" sx={{ mr: 2 }}>Logged in as: {user.email}</Typography>
+                  <Typography variant="body2" sx={{ mr: 2 }}>Logged in as: {user.username}</Typography>
                   <IconButton component={RouterLink} to="/favorites" color="inherit">
                     <FavoriteIcon />
                   </IconButton>

@@ -49,7 +49,7 @@ const AdminPage = () => { // Remove user prop
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
-        <Typography variant="body1" gutterBottom>Welcome, {user.email}!</Typography>
+        <Typography variant="body1" gutterBottom>Welcome, {user.username}!</Typography>
       </Paper>
       
       <Box sx={{ width: '100%' }}>

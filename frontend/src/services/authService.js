@@ -19,9 +19,9 @@ const register = async (formData) => {
     throw new Error('Registration failed: Invalid response from server.');
 };
 
-const login = async (email, password) => {
+const login = async (username, password) => {
     const response = await api.post('/auth/login', {
-        email,
+        username,
         password,
     });
 

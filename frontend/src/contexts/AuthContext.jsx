@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
     }, []);
 
-    const login = async (email, password) => {
-        const loggedInUser = await loginService(email, password);
+    const login = async (username, password) => {
+        const loggedInUser = await loginService(username, password);
         localStorage.setItem('user', JSON.stringify(loggedInUser));
         setUser(loggedInUser);
         // Navigation is handled by the LoginPage component and ProtectedRoute

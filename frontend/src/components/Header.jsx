@@ -59,7 +59,7 @@ const Header = () => {
                 onClick={handleMenu}
                 color="inherit"
               >
-                <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.email} sx={{ width: 32, height: 32 }}>
+                <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.username} sx={{ width: 32, height: 32 }}>
                   {!user.photo_url && <AccountCircle />}
                 </Avatar>
               </IconButton>

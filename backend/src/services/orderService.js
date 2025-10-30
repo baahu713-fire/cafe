@@ -98,7 +98,7 @@ const getOrderById = async (orderId, user) => {
         SELECT 
             o.*,
             u.name as user_name,
-            u.email as user_email,
+            u.username as username,
             u.photo_url as user_photo_url,
             COALESCE(
                 (
@@ -136,7 +136,7 @@ const getOrdersByUserId = async (userId, page, limit) => {
         SELECT 
             o.*,
             u.name as user_name,
-            u.email as user_email,
+            u.username as username,
             u.photo_url as user_photo_url,
             COALESCE((
                 SELECT json_agg(oi.*) 
@@ -169,7 +169,7 @@ const getAllOrders = async (page, limit) => {
         SELECT 
             o.*, 
             u.name as user_name,
-            u.email as user_email,
+            u.username as username,
             u.photo_url as user_photo_url,
             COALESCE((
                 SELECT json_agg(oi.*) 

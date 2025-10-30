@@ -96,7 +96,7 @@ const UserManagement = () => {
       <Box sx={{ mb: 2 }}>
         <TextField
           fullWidth
-          label="Search by email"
+          label="Search by username"
           variant="outlined"
           value={searchTerm}
           onChange={handleSearchChange}
@@ -117,8 +117,8 @@ const UserManagement = () => {
               <TableRow hover key={user.id}>
                 <TableCell component="th" scope="row">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.email} sx={{ width: 32, height: 32, mr: 2 }} />
-                    {user.email}
+                    <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.username} sx={{ width: 32, height: 32, mr: 2 }} />
+                    {user.username}
                   </Box>
                 </TableCell>
                 <TableCell>{user.order_count}</TableCell>

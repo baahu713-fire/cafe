@@ -2,26 +2,48 @@
 
 ## Overview
 
-This document outlines the architecture and features of the restaurant ordering application.
+This document outlines the architecture and implementation details of the project, a web application with a React frontend and a Node.js backend. The application features user authentication, team management, and a registration system that requires a valid key.
 
-## Features
+## Frontend
 
-### Implemented
+- **Framework:** React
+- **Styling:** Material-UI (MUI)
+- **Routing:** `react-router-dom`
+- **State Management:** React Context API (`AuthContext`)
 
-*   **User Authentication:** Users can register and log in to the application.
-*   **Menu:** Users can view the restaurant's menu.
-*   **Shopping Cart:** Users can add items to their cart and place orders.
-*   **Order History:** Users can view their past orders.
-*   **Favorites:** Users can mark items as favorites.
-*   **Admin Panel:** Administrators can manage menu items, users, and orders.
-*   **Photo and Team Selection:** Users can upload a profile photo and select a team during registration.
-*   **Mandatory Photo Upload:** Photo upload is now required for user registration.
-*   **Admin Order User Search:** Administrators can search for users by email when placing an order on their behalf from the cart page.
-*   **Enhanced Admin Order View:** The "Manage Orders" section in the admin dashboard now displays the username and email for each order, with search functionality for these fields.
+### Key Components
 
-### Fixes
+- **`RegisterPage.jsx`:** Handles user registration. It includes fields for Full Name, Username, Password, and a Registration Key. It also requires a profile photo upload.
+- **`LoginPage.jsx`:** Manages user login using a username and password.
+- **`AuthContext.jsx`:** Provides authentication state and functions (`login`, `signup`, `logout`) to the application.
+- **`authService.js`:** Contains functions for making API calls to the backend for authentication.
 
-*   **Registration Page Refresh Loop:** Fixed a bug where the registration page would continuously refresh due to a failed attempt to fetch the list of teams. The route for fetching teams was incorrectly protected by authentication middleware, which has now been removed.
-*   **Large File Upload Error Handling:** Implemented graceful error handling for large file uploads on the registration page. The backend now sends a specific error message, which is displayed to the user on the frontend.
-*   **Item Availability Display:** The menu now accurately reflects item availability. Unavailable items are visually disabled with a vintage look, and the "Add to Cart" button is disabled, preventing users from adding out-of-stock items to their cart.
-*   **Reordering with Outdated Prices:** Fixed a bug where reordering an item would use the historical price from the original order instead of the current price. The reorder logic now fetches the latest item details from the menu to ensure accurate pricing and availability.
+## Backend
+
+- **Framework:** Node.js with Express
+- **Database:** PostgreSQL
+- **Authentication:** JWT (JSON Web Tokens)
+
+### API Endpoints
+
+- **`POST /auth/register`:** Registers a new user. Expects `name`, `username`, `password`, `team_id`, `photo`, and `registrationKey`.
+- **`POST /auth/login`:** Logs in a user. Expects `username` and `password`.
+
+### Authentication Flow
+
+1.  **Registration:**
+    - A user provides their full name, username, password, team, a registration key, and a profile photo.
+    - The backend validates the registration key against the selected team.
+    - Upon successful validation, a new user is created in the database, and the registration key is marked as used.
+    - A JWT is issued to the user.
+
+2.  **Login:**
+    - A user submits their username and password.
+    - The backend verifies the credentials.
+    - If correct, a JWT is returned.
+
+## Recent Changes
+
+- **Username-based Authentication:** The system was updated to use a username for login instead of an email address.
+- **Full Name Field:** A "Full Name" field was added to the registration form, and the backend was updated to store this information.
+- **Registration Key Validation Fix:** A bug in the registration key validation logic was fixed. The `team_id` is now correctly parsed as an integer before comparison, resolving the "invalid registration key" error.

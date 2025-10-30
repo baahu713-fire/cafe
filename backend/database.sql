@@ -8,10 +8,12 @@ CREATE TABLE teams (
 -- Users Table: Stores user information for authentication and roles.
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    username VARCHAR(20) UNIQUE NOT NULL CHECK (char_length(username) >= 5 AND char_length(username) <= 20),
     hashed_password VARCHAR(255) NOT NULL,
     role VARCHAR(20), -- Role of the user (e.g., 'admin', 'staff').
     team_id INTEGER REFERENCES teams(id), -- The team the user belongs to.
+    photo_url VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
@@ -36,7 +38,8 @@ CREATE TABLE orders (
     user_id INTEGER REFERENCES users(id),
     total_price NUMERIC(10, 2) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending'
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    comment TEXT
 );
 
 -- Order Items Table: A join table linking menu items to specific orders.
@@ -49,6 +52,27 @@ CREATE TABLE order_items (
     price_at_order NUMERIC(10, 2) NOT NULL,
     name_at_order VARCHAR(255) NOT NULL -- Full name as ordered (e.g., "Coffee (Large)").
 );
+
+-- Registration Keys Table: Stores unique keys for user registration.
+CREATE TABLE registration_keys (
+    id SERIAL PRIMARY KEY,
+    registration_key VARCHAR(255) UNIQUE NOT NULL,
+    team_id INTEGER REFERENCES teams(id) NOT NULL, -- Each key is tied to a specific team.
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used_at TIMESTAMPTZ,
+    used_by_user_id INTEGER REFERENCES users(id)
+);
+
+-- Feedback Table for orders
+CREATE TABLE feedback (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) UNIQUE NOT NULL, -- Each order can only have one feedback entry
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 
 -- Sample Data
 INSERT INTO teams (name) VALUES ('Main Branch'), ('Second Branch');

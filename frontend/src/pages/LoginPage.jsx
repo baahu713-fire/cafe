@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,10 +30,10 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Invalid email or password. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Invalid username or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -64,13 +64,13 @@ const LoginPage = () => {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            autoComplete="email"
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
             autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             disabled={loading}
           />
           <TextField

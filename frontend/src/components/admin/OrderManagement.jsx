@@ -166,7 +166,7 @@ const OrderManagement = () => {
         return (
           order.id.toString().includes(searchTermLower) ||
           order.user_name.toLowerCase().includes(searchTermLower) ||
-          order.user_email.toLowerCase().includes(searchTermLower) ||
+          order.username.toLowerCase().includes(searchTermLower) ||
           order.status.toLowerCase().includes(searchTermLower)
         );
       })
@@ -239,7 +239,7 @@ const OrderManagement = () => {
                     <Avatar src={getImageUrl(order.user_photo_url)} alt={order.user_name} sx={{ width: 32, height: 32, mr: 2 }} />
                     <div>
                       <Typography variant="body2">{order.user_name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{order.user_email}</Typography>
+                      <Typography variant="caption" color="text.secondary">{order.username}</Typography>
                     </div>
                   </Box>
                 </TableCell>

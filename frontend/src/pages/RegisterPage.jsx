@@ -19,12 +19,13 @@ import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [photo, setPhoto] = useState(null);
   const [teams, setTeams] = useState([]);
   const [teamId, setTeamId] = useState('');
+  const [registrationKey, setRegistrationKey] = useState('');
   const [error, setError] = useState('');
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -55,12 +56,18 @@ const RegisterPage = () => {
       return;
     }
 
+    if (!registrationKey) {
+      setError('A registration key is required.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('email', email);
+    formData.append('username', username);
     formData.append('password', password);
     formData.append('team_id', teamId);
     formData.append('photo', photo);
+    formData.append('registrationKey', registrationKey);
 
     try {
       await signup(formData);
@@ -110,12 +117,12 @@ const RegisterPage = () => {
             margin="normal"
             required
             fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <TextField
             margin="normal"
@@ -138,6 +145,17 @@ const RegisterPage = () => {
             id="confirmPassword"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="registrationKey"
+            label="Registration Key"
+            type="text"
+            id="registrationKey"
+            value={registrationKey}
+            onChange={(e) => setRegistrationKey(e.target.value)}
           />
             <FormControl fullWidth margin="normal">
                 <InputLabel id="team-select-label">Team</InputLabel>

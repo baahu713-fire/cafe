@@ -32,8 +32,8 @@ const buildQuery = (baseQuery, page, limit, search, searchFields, isOrderQuery =
 };
 
 const getAllUsers = async (page, limit, search = '') => {
-    const baseQuery = 'SELECT id, email, role, created_at FROM users';
-    const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['email']);
+    const baseQuery = 'SELECT id, username, role, created_at FROM users';
+    const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['username']);
     
     const totalResult = await db.query(totalQuery, params.slice(0, params.length - 2));
     const total = parseInt(totalResult.rows[0].count, 10);
@@ -47,7 +47,7 @@ const getUsersWithOrderStats = async (page, limit, search = '') => {
     const baseQuery = `
         SELECT
             u.id,
-            u.email,
+            u.username,
             u.role,
             u.created_at,
             COUNT(o.id) AS order_count,
@@ -56,7 +56,7 @@ const getUsersWithOrderStats = async (page, limit, search = '') => {
         JOIN orders o ON u.id = o.user_id
     `;
 
-    const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['u.email'], true);
+    const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['u.username'], true);
     
     const totalResult = await db.query(totalQuery, params.slice(0, params.length - 2));
     const total = parseInt(totalResult.rows[0].count, 10);
@@ -66,7 +66,13 @@ const getUsersWithOrderStats = async (page, limit, search = '') => {
     return { users, total };
 };
 
+const getActiveUsers = async () => {
+    const { rows } = await db.query('SELECT u.id, u.username, u.role, t.name as team_name FROM users u LEFT JOIN teams t ON u.team_id = t.id WHERE u.is_active = TRUE ORDER BY u.username ASC');
+    return rows;
+};
+
 module.exports = {
     getAllUsers,
     getUsersWithOrderStats,
+    getActiveUsers
 };

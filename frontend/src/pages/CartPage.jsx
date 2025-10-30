@@ -15,20 +15,16 @@ import {
     TextField,
     CircularProgress,
     Alert,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
     Autocomplete
 } from '@mui/material';
 import { Add, Remove, Delete } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
-import useUsers from '../hooks/useUsers';
-import { useAuth } from '../contexts/AuthContext'; // Import useAuth
+import useActiveUsers from '../hooks/useActiveUsers';
+import { useAuth } from '../contexts/AuthContext';
 
-const CartPage = () => { // Remove user prop
-    const { user } = useAuth(); // Get user from AuthContext
+const CartPage = () => {
+    const { user } = useAuth();
     const {
         cart,
         updateQuantity,
@@ -43,7 +39,7 @@ const CartPage = () => { // Remove user prop
 
     const [comment, setComment] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
-    const { users } = useUsers(user);
+    const { activeUsers: users } = useActiveUsers(user);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -140,7 +136,7 @@ const CartPage = () => { // Remove user prop
                         {user && user.isAdmin && (
                             <Autocomplete
                                 options={users}
-                                getOptionLabel={(option) => option.email}
+                                getOptionLabel={(option) => option.username}
                                 onChange={(event, newValue) => {
                                     setSelectedUser(newValue);
                                 }}
