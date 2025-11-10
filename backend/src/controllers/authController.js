@@ -2,9 +2,13 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
+    // 1. Check if the CAPTCHA has been verified in the current session.
+    if (!req.session.captchaVerified) {
+      return res.status(403).json({ message: 'Please complete the CAPTCHA verification before registering.' });
+    }
+
     const { name, username, password, role, team_id, registrationKey } = req.body;
 
-    // A registration key is now mandatory for creating an account.
     if (!registrationKey) {
       return res.status(400).json({ message: 'A valid registration key is required.' });
     }
@@ -15,20 +19,19 @@ const register = async (req, res) => {
 
     const photo_url = `/uploads/${req.file.filename}`;
     
-    // Pass the registration key to the service layer for validation and processing.
     const user = await authService.registerUser({ name, username, password, role, team_id, photo_url, registrationKey });
+
+    // 2. Invalidate the CAPTCHA verification after successful registration.
+    req.session.captchaVerified = false;
 
     res.status(201).json(user);
   } catch (error) {
-    // Retain existing error handling for duplicate usernames.
     if (error.code === '23505') { 
       return res.status(409).json({ message: 'This username is already taken.' });
     }
-    // Provide a more specific message if the registration key is invalid or already used.
     if (error.message.includes('registration key')) {
         return res.status(403).json({ message: error.message });
     }
-    // General server error
     res.status(500).json({ message: error.message || 'An error occurred during registration. Please try again later.' });
   }
 };

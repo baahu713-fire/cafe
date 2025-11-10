@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs').promises;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
 
@@ -31,12 +32,15 @@ const registerUser = async (userData) => {
       throw new Error('This registration key is not valid for the selected team.');
     }
 
+    // Read the photo file into a buffer
+    const photoBuffer = await fs.readFile(photo_url);
+
     const keyId = keyData.id;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userResult = await client.query(
-      'INSERT INTO users (name, username, hashed_password, role, team_id, photo_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, username, role, team_id, photo_url, is_active',
-      [name, username, hashedPassword, role, team_id, photo_url]
+      'INSERT INTO users (name, username, hashed_password, role, team_id, photo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, username, role, team_id, is_active',
+      [name, username, hashedPassword, role, team_id, photoBuffer]
     );
 
     const user = userResult.rows[0];
@@ -47,6 +51,9 @@ const registerUser = async (userData) => {
     );
 
     await client.query('COMMIT');
+    
+    // Clean up the uploaded file
+    await fs.unlink(photo_url);
 
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role, teamId: user.team_id },

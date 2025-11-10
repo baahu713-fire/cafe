@@ -12,6 +12,7 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
+  Avatar,
 } from '@mui/material';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AccountCircle from '@mui/icons-material/AccountCircle';
@@ -101,7 +102,11 @@ const AppNav = () => {
               aria-haspopup="true"
               color="inherit"
             >
-              <AccountCircle />
+              {user.photo ? (
+                <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
+              ) : (
+                <AccountCircle />
+              )}
             </IconButton>
             <p>Profile</p>
         </MenuItem>
@@ -172,7 +177,11 @@ const AppNav = () => {
                     color="inherit"
                     sx={{ ml: 1 }}
                   >
-                    <AccountCircle />
+                    {user.photo ? (
+                      <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
+                    ) : (
+                      <AccountCircle />
+                    )}
                   </IconButton>
                 </Box>
               ) : (

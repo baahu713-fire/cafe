@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getUsers, getAllUsers, getActiveUsers } = require('../controllers/userController');
+const { getUsers, getAllUsers, getActiveUsers, getUserPhoto } = require('../controllers/userController');
 const { authMiddleware, admin } = require('../middleware/authMiddleware');
 
 // @route   GET /api/users
@@ -17,5 +17,10 @@ router.get('/all', authMiddleware, admin, getAllUsers);
 // @desc    Get all active users for admin order placement
 // @access  Private/Admin
 router.get('/active', authMiddleware, admin, getActiveUsers);
+
+// @route   GET /api/users/:userId/photo
+// @desc    Get user photo
+// @access  Public
+router.get('/:userId/photo', getUserPhoto);
 
 module.exports = router;

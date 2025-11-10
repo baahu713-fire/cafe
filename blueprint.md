@@ -1,49 +1,119 @@
-# Project Blueprint
+# Project Blueprint: Secure CAPTCHA Integration
 
-## Overview
+## 1. Overview
 
-This document outlines the architecture and implementation details of the project, a web application with a React frontend and a Node.js backend. The application features user authentication, team management, and a registration system that requires a valid key.
+This document outlines the implementation of a secure CAPTCHA generation and validation system for the application. The goal is to protect against automated bots and ensure that user interactions are genuine.
 
-## Frontend
+### Core Technologies
 
-- **Framework:** React
-- **Styling:** Material-UI (MUI)
-- **Routing:** `react-router-dom`
-- **State Management:** React Context API (`AuthContext`)
+- **Backend:** Node.js, Express
+- **CAPTCHA Generation:** `svg-captcha`
+- **Session Management:** `express-session`
+- **Session Storage:** `connect-redis` with a Redis server
 
-### Key Components
+## 2. Feature Implementation
 
-- **`RegisterPage.jsx`:** Handles user registration. It includes fields for Full Name, Username, Password, and a Registration Key. It also requires a profile photo upload.
-- **`LoginPage.jsx`:** Manages user login using a username and password.
-- **`AuthContext.jsx`:** Provides authentication state and functions (`login`, `signup`, `logout`) to the application.
-- **`authService.js`:** Contains functions for making API calls to the backend for authentication.
+### Backend
 
-## Backend
+- **Modular Architecture:** The logic is separated into a `captchaService.js` for CAPTCHA generation and Redis operations, a `captchaController.js` to handle API requests, and `captcha.js` for routing.
+- **Redis Integration:** A Redis client is configured and used to store CAPTCHA values with a 2-minute expiration, keyed by the user's session ID.
+- **Session Management:** `express-session` is configured to use a Redis-backed store, ensuring that sessions are persistent and secure.
+- **ES Module Conversion:** The entire backend has been updated to use modern ES Module syntax (`import`/`export`) for consistency and to adhere to the project requirements.
 
-- **Framework:** Node.js with Express
-- **Database:** PostgreSQL
-- **Authentication:** JWT (JSON Web Tokens)
+### Endpoints
 
-### API Endpoints
+- **`GET /api/generate-captcha`**: Generates a new SVG CAPTCHA image and stores its value in the user's session.
+- **`POST /api/validate-captcha`**: Validates the user-submitted CAPTCHA input against the stored value.
 
-- **`POST /auth/register`:** Registers a new user. Expects `name`, `username`, `password`, `team_id`, `photo`, and `registrationKey`.
-- **`POST /auth/login`:** Logs in a user. Expects `username` and `password`.
+## 3. Usage and Testing
 
-### Authentication Flow
+### Testing with `curl`
 
-1.  **Registration:**
-    - A user provides their full name, username, password, team, a registration key, and a profile photo.
-    - The backend validates the registration key against the selected team.
-    - Upon successful validation, a new user is created in the database, and the registration key is marked as used.
-    - A JWT is issued to the user.
+You can test the CAPTCHA endpoints using `curl` and a cookie file to simulate a user session.
 
-2.  **Login:**
-    - A user submits their username and password.
-    - The backend verifies the credentials.
-    - If correct, a JWT is returned.
+**1. Generate a CAPTCHA:**
 
-## Recent Changes
+```bash
+# The -c cookie.txt saves the session cookie for the next request
+curl -X GET http://localhost:5000/api/generate-captcha -c cookie.txt --output captcha.svg
+```
 
-- **Username-based Authentication:** The system was updated to use a username for login instead of an email address.
-- **Full Name Field:** A "Full Name" field was added to the registration form, and the backend was updated to store this information.
-- **Registration Key Validation Fix:** A bug in the registration key validation logic was fixed. The `team_id` is now correctly parsed as an integer before comparison, resolving the "invalid registration key" error.
+This will save the CAPTCHA image to `captcha.svg`. Open this file to see the CAPTCHA text.
+
+**2. Validate the CAPTCHA:**
+
+Replace `"YOUR_CAPTCHA_TEXT"` with the text from the generated image.
+
+```bash
+# The -b cookie.txt sends the saved session cookie
+curl -X POST http://localhost:5000/api/validate-captcha -b cookie.txt -H "Content-Type: application/json" -d '{"captchaInput": "YOUR_CAPTCHA_TEXT"}'
+```
+
+### Frontend React Example
+
+Here is a conceptual example of how to integrate the CAPTCHA functionality into a React component.
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+// Configure axios to send cookies with requests
+const apiClient = axios.create({
+  baseURL: 'http://localhost:5000/api',
+  withCredentials: true, // Important for sending session cookies
+});
+
+const CaptchaComponent = () => {
+  const [captchaImage, setCaptchaImage] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [message, setMessage] = useState('');
+
+  const fetchCaptcha = async () => {
+    try {
+      const response = await apiClient.get('/generate-captcha', {
+        responseType: 'blob', // Fetch as a blob to create an object URL
+      });
+      const imageUrl = URL.createObjectURL(response.data);
+      setCaptchaImage(imageUrl);
+    } catch (error) {
+      console.error('Error fetching CAPTCHA:', error);
+      setMessage('Failed to load CAPTCHA.');
+    }
+  };
+
+  useEffect(() => {
+    fetchCaptcha();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await apiClient.post('/validate-captcha', { captchaInput });
+      setMessage(response.data.message);
+    } catch (error) {
+      setMessage(error.response.data.message || 'An error occurred.');
+    }
+  };
+
+  return (
+    <div>
+      <h2>CAPTCHA Verification</h2>
+      {captchaImage && <img src={captchaImage} alt="CAPTCHA" />}
+      <button onClick={fetchCaptcha}>Refresh CAPTCHA</button>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={captchaInput}
+          onChange={(e) => setCaptchaInput(e.target.value)}
+          placeholder="Enter CAPTCHA"
+          required
+        />
+        <button type="submit">Validate</button>
+      </form>
+      {message && <p>{message}</p>}
+    </div>
+  );
+};
+
+export default CaptchaComponent;
+```

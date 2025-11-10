@@ -7,7 +7,6 @@ import {
   DialogContentText, DialogTitle, TablePagination, TextField, Avatar
 } from '@mui/material';
 import { debounce } from 'lodash';
-import getImageUrl from '../../utils/getImageUrl';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -117,7 +116,7 @@ const UserManagement = () => {
               <TableRow hover key={user.id}>
                 <TableCell component="th" scope="row">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={getImageUrl(user.photo_url)} alt={user.name || user.username} sx={{ width: 32, height: 32, mr: 2 }} />
+                    <Avatar src={`/api/users/${user.id}/photo`} alt={user.name || user.username} sx={{ width: 32, height: 32, mr: 2 }} />
                     {user.username}
                   </Box>
                 </TableCell>

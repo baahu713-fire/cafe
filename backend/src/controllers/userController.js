@@ -33,8 +33,25 @@ const getActiveUsers = async (req, res, next) => {
     }
 };
 
+const getUserPhoto = async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const photo = await userService.getUserPhoto(userId);
+        if (photo) {
+            res.set('Content-Type', 'image/jpeg');
+            res.send(photo);
+        } else {
+            res.status(404).send('Photo not found.');
+        }
+    } catch (error) {
+        console.error('Error fetching user photo:', error);
+        res.status(500).send('Error fetching photo.');
+    }
+};
+
 module.exports = {
     getUsers,
     getAllUsers,
-    getActiveUsers
+    getActiveUsers,
+    getUserPhoto
 };

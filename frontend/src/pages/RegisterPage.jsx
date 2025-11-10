@@ -27,6 +27,8 @@ const RegisterPage = () => {
   const [teamId, setTeamId] = useState('');
   const [registrationKey, setRegistrationKey] = useState('');
   const [error, setError] = useState('');
+  const [captchaSvg, setCaptchaSvg] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -42,9 +44,27 @@ const RegisterPage = () => {
     fetchTeams();
   }, []);
 
+  const fetchCaptcha = async () => {
+    try {
+      const response = await api.get('/generate-captcha', { withCredentials: true });
+      setCaptchaSvg(response.data);
+    } catch (err) {
+      setError('Failed to load CAPTCHA.');
+    }
+  };
+
+  useEffect(() => {
+    fetchCaptcha();
+  }, []);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
+    if (username.length < 5 || username.length > 20) {
+        setError('Username must be between 5 and 20 characters long.');
+        return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -60,24 +80,34 @@ const RegisterPage = () => {
       setError('A registration key is required.');
       return;
     }
-
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('username', username);
-    formData.append('password', password);
-    formData.append('team_id', teamId);
-    formData.append('photo', photo);
-    formData.append('registrationKey', registrationKey);
+    
+    if (!captchaInput) {
+      setError('Please enter the CAPTCHA text.');
+      return;
+    }
 
     try {
+      // Step 1: Validate the CAPTCHA
+      await api.post('/validate-captcha', { captchaInput }, { withCredentials: true });
+
+      // Step 2: If CAPTCHA is valid, proceed with registration
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('team_id', teamId);
+      formData.append('photo', photo);
+      formData.append('registrationKey', registrationKey);
+
       await signup(formData);
       navigate('/');
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
         setError(err.response.data.message);
       } else {
-        setError(err.message || 'An unexpected error occurred.');
+        setError(err.message || 'An unexpected error occurred during registration.');
       }
+      fetchCaptcha();
     }
   };
 
@@ -173,6 +203,21 @@ const RegisterPage = () => {
                     ))}
                 </Select>
             </FormControl>
+            <Box sx={{ my: 2, p: 2, border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center' }}>
+                <div dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+                <Button onClick={fetchCaptcha} size="small" sx={{ mt: 1 }}>Refresh CAPTCHA</Button>
+            </Box>
+            <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="captcha"
+                label="Enter CAPTCHA"
+                type="text"
+                id="captcha"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+            />
           <Button
             variant="contained"
             component="label"

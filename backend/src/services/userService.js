@@ -71,8 +71,17 @@ const getActiveUsers = async () => {
     return rows;
 };
 
+const getUserPhoto = async (userId) => {
+    const result = await db.query('SELECT photo FROM users WHERE id = $1', [userId]);
+    if (result.rows.length > 0) {
+        return result.rows[0].photo;
+    }
+    return null;
+};
+
 module.exports = {
     getAllUsers,
     getUsersWithOrderStats,
-    getActiveUsers
+    getActiveUsers,
+    getUserPhoto
 };

@@ -6,7 +6,6 @@ import {
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, 
   DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip, Avatar
 } from '@mui/material';
-import getImageUrl from '../../utils/getImageUrl';
 
 const OrderDetailsDialog = ({ order, open, onClose }) => {
     if (!order) return null;
@@ -236,7 +235,7 @@ const OrderManagement = () => {
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={getImageUrl(order.user_photo_url)} alt={order.user_name} sx={{ width: 32, height: 32, mr: 2 }} />
+                    <Avatar src={`/api/users/${order.user_id}/photo`} alt={order.user_name} sx={{ width: 32, height: 32, mr: 2 }} />
                     <div>
                       <Typography variant="body2">{order.user_name}</Typography>
                       <Typography variant="caption" color="text.secondary">{order.username}</Typography>
