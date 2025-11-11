@@ -117,3 +117,22 @@ const CaptchaComponent = () => {
 
 export default CaptchaComponent;
 ```
+## 4. Redis Configuration
+
+The application is configured to use Redis in both development and production environments, with a robust connection logic that allows the application to function even if Redis is unavailable.
+
+### Environment-Specific Configuration
+
+The `backend/src/config/redis.js` script detects the environment to determine how to connect to Redis:
+
+-   **Production:** When running in a Docker container (detected by the presence of `/run/secrets/db_user`), the script connects to Redis using the `REDIS_URL` environment variable, which is set to `redis://redis:6379` in the `docker-compose.prod.yml` file.
+
+-   **Development:** In a local development environment, the script connects to a remote Redis service using credentials stored in the `.env` file (`REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_HOST`, and `REDIS_PORT`).
+
+### Connection Logic
+
+The `redis.js` file exports a `getRedisClient` function that manages the connection. It includes:
+
+-   **Lazy Connection:** The connection to Redis is only established when it is first requested.
+-   **Reconnection Strategy:** The client will automatically attempt to reconnect if the connection is lost.
+-   **Graceful Failure:** If the Redis service is unavailable, the `getRedisClient` function will return `null`, and the application will log a warning without crashing. This ensures that the application remains operational even if the Redis-dependent features are not.

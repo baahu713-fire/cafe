@@ -3,16 +3,11 @@ version: '3.8'
 # Define the secrets to be read from files on the host.
 secrets:
   db_user:
-    external: true
+    file: ./db_user.txt
   db_password:
-    external: true
+    file: ./db_password.txt
   db_name:
-    external: true
-  redis_user:
-    external: true
-  redis_password:
-    external: true
-
+    file: ./db_name.txt
 
 services:
   backend:
@@ -29,8 +24,6 @@ services:
       - db_user
       - db_password
       - db_name
-      - redis_user
-      - redis_password
     depends_on:
       - redis
     environment:
@@ -47,14 +40,6 @@ services:
       - backend
 
   redis:
-    image: redis:latest
-    command: redis-server --requirepass-file /run/secrets/redis_password
-    secrets:
-      - redis_password
-    volumes:
-      - redis_data:/data
+    image: redis:alpine
     ports:
       - "6379:6379"
-
-volumes:
-  redis_data:

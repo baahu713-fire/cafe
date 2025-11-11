@@ -1,5 +1,5 @@
 import svgCaptcha from 'svg-captcha';
-import redisClient from '../config/redis.js';
+import {getRedisClient} from '../config/redis.js';
 
 /**
  * Generates a new CAPTCHA and stores its text in Redis.
@@ -14,6 +14,8 @@ async function generateCaptcha(sessionId) {
     color: true,
     background: '#f0f0f0',
   });
+
+  const redisClient = await getRedisClient();
 
   // Store the CAPTCHA text in Redis, expiring after 2 minutes
   await redisClient.set(`captcha:${sessionId}`, captcha.text, { EX: 120 });
