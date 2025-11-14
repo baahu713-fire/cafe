@@ -19,8 +19,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
+    image: cafe_backend:latest
     ports:
       - "5000:5000"
+    networks:
+      - cafe_network
     # This ensures the container can reach the host machine's services.
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -41,20 +44,34 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+    image: cafe_frontend:latest
     ports:
       - "80:80"
+    networks:
+      - cafe_network
     depends_on:
       - backend
 
   redis:
     image: redis:latest
-    command: redis-server --requirepass-file /run/secrets/redis_password
+    #command: redis-server --requirepass-file /run/secrets/redis_password
+    environment:
+      - REDIS_ARGS=--requirepass-file /run/secrets/redis_password
+
     secrets:
       - redis_password
     volumes:
       - redis_data:/data
+    networks:
+      - cafe_network
     ports:
       - "6379:6379"
+
+
+networks:
+  cafe_network:
+    driver: overlay
+
 
 volumes:
   redis_data:
