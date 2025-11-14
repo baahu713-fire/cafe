@@ -27,7 +27,8 @@ app.use(helmet());
 // Configure CORS for your specific production and development domains
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000', // Your production frontend
-  'http://localhost:3000' // Your local dev frontend
+  'http://localhost:3000', // Your local dev frontend'
+  'http://localhost'
 ];
 
 const corsOptions = {
@@ -41,8 +42,8 @@ const corsOptions = {
   credentials: true, // Allow cookies to be sent
   optionsSuccessStatus: 200
 };
-// app.use(cors(corsOptions));
-app.use(cors());
+app.use(cors(corsOptions));
+// app.use(cors());
 
 // HTTP request logger
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));

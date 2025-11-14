@@ -5,6 +5,7 @@ const register = async (formData) => {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
+        withCredentials: true,
     });
 
     if (response.data.token && response.data.user) {

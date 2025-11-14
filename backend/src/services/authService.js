@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 const fs = require('fs').promises;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
@@ -32,8 +33,12 @@ const registerUser = async (userData) => {
       throw new Error('This registration key is not valid for the selected team.');
     }
 
-    // Read the photo file into a buffer
-    const photoBuffer = await fs.readFile(photo_url);
+    // --- 2. CONVERT THE WEB PATH TO A FILESYSTEM PATH ---
+    // photo_url is '/uploads/filename.png'
+    const absolutePath = path.resolve(process.cwd(), photo_url.substring(1));
+    // absolutePath is now '/usr/src/app/uploads/filename.png'
+    // Read the photo file into a buffer from the correct path
+    const photoBuffer = await fs.readFile(absolutePath);
 
     const keyId = keyData.id;
     const hashedPassword = await bcrypt.hash(password, 10);

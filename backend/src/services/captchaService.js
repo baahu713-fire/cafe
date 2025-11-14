@@ -16,7 +16,12 @@ async function generateCaptcha(sessionId) {
   });
 
   const redisClient = await getRedisClient();
-
+  // ADDED: Check if the client is null
+  if (!redisClient) {
+    console.error("Redis client not available for generateCaptcha.");
+    // Return an error or a default state
+    return { svg: null, error: "Captcha service unavailable" };
+  }
   // Store the CAPTCHA text in Redis, expiring after 2 minutes
   await redisClient.set(`captcha:${sessionId}`, captcha.text, { EX: 120 });
 
@@ -30,6 +35,12 @@ async function generateCaptcha(sessionId) {
  * @returns {Promise<boolean>} True if the input is correct, false otherwise.
  */
 async function validateCaptcha(sessionId, userInput) {
+  const redisClient = await getRedisClient();
+  // --- ADDED: Check if client is null ---
+  if (!redisClient) {
+    console.error("Redis client not available for validateCaptcha.");
+    return false; // Fail validation if Redis is down
+  }
   const storedCaptcha = await redisClient.get(`captcha:${sessionId}`);
 
   // Immediately delete the CAPTCHA after the first attempt to prevent replay attacks
