@@ -1,13 +1,13 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const path = require('path');
-const fs = require('fs').promises;
+// const path = require('path');
+// const fs = require('fs').promises;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
 
 const registerUser = async (userData) => {
-  const { name, username, password, role, team_id, photo_url, registrationKey } = userData;
+  const { name, username, password, role, team_id, photoBuffer, registrationKey } = userData;
 
   const client = await db.pool.connect();
 
@@ -33,13 +33,6 @@ const registerUser = async (userData) => {
       throw new Error('This registration key is not valid for the selected team.');
     }
 
-    // --- 2. CONVERT THE WEB PATH TO A FILESYSTEM PATH ---
-    // photo_url is '/uploads/filename.png'
-    const absolutePath = path.resolve(process.cwd(), photo_url.substring(1));
-    // absolutePath is now '/usr/src/app/uploads/filename.png'
-    // Read the photo file into a buffer from the correct path
-    const photoBuffer = await fs.readFile(absolutePath);
-
     const keyId = keyData.id;
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -58,7 +51,7 @@ const registerUser = async (userData) => {
     await client.query('COMMIT');
     
     // Clean up the uploaded file
-    await fs.unlink(photo_url);
+    // await fs.unlink(photo_url);
 
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role, teamId: user.team_id },

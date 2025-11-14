@@ -2,12 +2,16 @@ const multer = require('multer');
 const path = require('path');
 
 // Set up storage engine
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: function(req, file, cb){
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
+// const storage = multer.diskStorage({
+//     destination: './uploads/',
+//     filename: function(req, file, cb){
+//         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+//     }
+// });
+
+// Use memoryStorage to hold the file as a buffer
+const storage = multer.memoryStorage();
+
 
 // Initialize upload
 const upload = multer({

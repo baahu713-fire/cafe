@@ -17,9 +17,9 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'A profile photo is required.' });
     }
 
-    const photo_url = `/uploads/${req.file.filename}`;
+    const photoBuffer = req.file.buffer;
     
-    const user = await authService.registerUser({ name, username, password, role, team_id, photo_url, registrationKey });
+    const user = await authService.registerUser({ name, username, password, role, team_id, photoBuffer, registrationKey });
 
     // 2. Invalidate the CAPTCHA verification after successful registration.
     req.session.captchaVerified = false;

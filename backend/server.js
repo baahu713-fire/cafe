@@ -28,8 +28,13 @@ app.use(helmet());
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000', // Your production frontend
   'http://localhost:3000', // Your local dev frontend'
-  'http://localhost'
+  'http://localhost',
+  'http://127.0.0.1'
 ];
+
+if (process.env.DEV_ORIGIN) {
+  allowedOrigins.push(process.env.DEV_ORIGIN);
+}
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -55,7 +60,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Apply rate limiting to all /api/ routes
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // Limit each IP to 30 requests per window
+  max: 500, // Limit each IP to 30 requests per window
   message: 'Too many requests from this IP, please try again after 15 minutes.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
