@@ -18,6 +18,10 @@ const parseOrder = (order) => {
 
 const createOrder = async (orderData, userId) => {
     const { items, comment } = orderData;
+    if (!items || items.length === 0) {
+        throw new Error('An order must contain at least one item.');
+    }
+
     let totalOrderPrice = 0;
     const createdOrderItems = [];
 
@@ -38,6 +42,10 @@ const createOrder = async (orderData, userId) => {
         const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
 
         for (const item of items) {
+            if (item.quantity <= 0) {
+                throw new Error('Item quantity must be a positive number.');
+            }
+
             const menuItem = menuItemMap.get(item.menu_item_id);
             if (!menuItem) {
                 throw new Error(`Menu item with ID ${item.menu_item_id} could not be found.`);
@@ -208,17 +216,24 @@ const cancelOrder = async (orderId, user) => {
         throw new Error('Order not found.');
     }
 
-    // Admins can cancel any order, otherwise, the user must own the order.
     if (user.role !== 'admin' && order.user_id !== user.userId) {
         throw new Error('You are not authorized to cancel this order.');
     }
 
-    // Regular users can only cancel orders that are PENDING.
-    if (user.role !== 'admin' && order.status !== ORDER_STATUS.PENDING) {
-        throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
+    if (user.role !== 'admin') {
+        if (order.status !== ORDER_STATUS.PENDING) {
+            throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
+        }
+
+        const orderCreationTime = new Date(order.created_at).getTime();
+        const currentTime = new Date().getTime();
+        const timeDifferenceInSeconds = (currentTime - orderCreationTime) / 1000;
+
+        if (timeDifferenceInSeconds > 60) {
+            throw new Error('Cancellation window has expired. Orders can only be cancelled within 60 seconds of creation.');
+        }
     }
 
-    // Nobody can cancel an order that is already settled or cancelled.
     if ([ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)) {
          throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
     }
