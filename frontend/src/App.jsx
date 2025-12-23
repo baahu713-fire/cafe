@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Routes,
@@ -13,7 +12,7 @@ import {
 } from '@mui/material';
 import theme from './theme.js';
 import AppNav from './components/AppBar.jsx';
-import Footer from './components/Footer.jsx'; // Import the new Footer component
+import Footer from './components/Footer.jsx';
 import MenuPage from './pages/MenuPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -21,7 +20,9 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import MyOrdersPage from './pages/MyOrdersPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
-import { useAuth } from './contexts/AuthContext';
+import ProfilePage from './pages/ProfilePage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import { useAuth } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 const App = () => {
@@ -48,6 +49,7 @@ const App = () => {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Admin Protected Route */}
             <Route element={<ProtectedRoute requiredRole="admin" />}>
@@ -58,6 +60,7 @@ const App = () => {
             <Route element={<ProtectedRoute />}>
               <Route path="/orders" element={<MyOrdersPage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
           </Routes>

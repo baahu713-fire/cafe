@@ -1,8 +1,6 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-// const path = require('path');
-// const fs = require('fs').promises;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
 
@@ -49,9 +47,6 @@ const registerUser = async (userData) => {
     );
 
     await client.query('COMMIT');
-    
-    // Clean up the uploaded file
-    // await fs.unlink(photo_url);
 
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role, teamId: user.team_id },
@@ -96,7 +91,50 @@ const loginUser = async (credentials) => {
   return { token, user: userWithoutPassword };
 };
 
+const forgotPassword = async ({ username, registrationKey, newPassword }) => {
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Find the user by username
+        const userResult = await client.query('SELECT id FROM users WHERE username = $1', [username]);
+        if (userResult.rows.length === 0) {
+            throw new Error('User not found.');
+        }
+        const userId = userResult.rows[0].id;
+
+        // Find the registration key and check if it was used by this user
+        const keyResult = await client.query(
+            'SELECT id, used_by_user_id FROM registration_keys WHERE registration_key = $1',
+            [registrationKey]
+        );
+
+        if (keyResult.rows.length === 0) {
+            throw new Error('Invalid registration key.');
+        }
+
+        const keyData = keyResult.rows[0];
+        if (keyData.used_by_user_id !== userId) {
+            throw new Error('This registration key is not associated with this user.');
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        await client.query('UPDATE users SET hashed_password = $1 WHERE id = $2', [hashedPassword, userId]);
+
+        await client.query('COMMIT');
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  forgotPassword
 };

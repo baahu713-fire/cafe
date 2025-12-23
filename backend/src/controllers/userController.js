@@ -49,9 +49,35 @@ const getUserPhoto = async (req, res) => {
     }
 };
 
+const updateUserProfile = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const { name, password } = req.body;
+        const photo = req.file ? req.file.buffer : null;
+
+        const updatedUser = await userService.updateUserProfile(userId, { name, password, photo });
+
+        res.json(updatedUser);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getUserProfile = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const user = await userService.getUserProfile(userId);
+        res.json(user);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getUsers,
     getAllUsers,
     getActiveUsers,
-    getUserPhoto
+    getUserPhoto,
+    updateUserProfile,
+    getUserProfile
 };

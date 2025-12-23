@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
+const bcrypt = require('bcryptjs');
 
 const buildQuery = (baseQuery, page, limit, search, searchFields, isOrderQuery = false) => {
     const offset = (page - 1) * limit;
@@ -79,9 +80,54 @@ const getUserPhoto = async (userId) => {
     return null;
 };
 
+const updateUserProfile = async (userId, { name, password, photo }) => {
+    const setClauses = [];
+    const params = [userId];
+
+    if (name) {
+        params.push(name);
+        setClauses.push(`name = $${params.length}`);
+    }
+
+    if (password) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        params.push(hashedPassword);
+        setClauses.push(`hashed_password = $${params.length}`);
+    }
+
+    if (photo) {
+        params.push(photo);
+        setClauses.push(`photo = $${params.length}`);
+    }
+
+    if (setClauses.length === 0) {
+        throw new Error('No fields to update.');
+    }
+
+    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, username, role, team_id, is_active`;
+
+    const { rows: [updatedUser] } = await db.query(query, params);
+
+    if (!updatedUser) {
+        throw new Error('User not found.');
+    }
+
+    return updatedUser;
+};
+
+const getUserProfile = async (userId) => {
+    const { rows } = await db.query('SELECT id, name, username, role, team_id, is_active FROM users WHERE id = $1', [userId]);
+    if (rows.length === 0) {
+        throw new Error('User not found');
+    }
+    return rows[0];
+};
+
 module.exports = {
     getAllUsers,
     getUsersWithOrderStats,
     getActiveUsers,
-    getUserPhoto
+    getUserPhoto,
+    updateUserProfile,
+    getUserProfile
 };

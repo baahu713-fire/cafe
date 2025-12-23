@@ -58,6 +58,7 @@ const AppNav = () => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
     >
+      <MenuItem component={RouterLink} to="/profile" onClick={handleMenuClose}>Profile</MenuItem>
       <MenuItem onClick={handleLogout}>Logout</MenuItem>
     </Menu>
   );

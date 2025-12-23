@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getUsers, getAllUsers, getActiveUsers, getUserPhoto } = require('../controllers/userController');
+const { getUsers, getAllUsers, getActiveUsers, getUserPhoto, updateUserProfile, getUserProfile } = require('../controllers/userController');
 const { authMiddleware, admin } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 // @route   GET /api/users
 // @desc    Get all users
@@ -18,9 +19,19 @@ router.get('/all', authMiddleware, admin, getAllUsers);
 // @access  Private/Admin
 router.get('/active', authMiddleware, admin, getActiveUsers);
 
+// @route   GET /api/users/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', authMiddleware, getUserProfile);
+
 // @route   GET /api/users/:userId/photo
 // @desc    Get user photo
 // @access  Public
 router.get('/:userId/photo', getUserPhoto);
+
+// @route   PUT /api/users/profile
+// @desc    Update user profile
+// @access  Private
+router.put('/profile', authMiddleware, upload, updateUserProfile);
 
 module.exports = router;

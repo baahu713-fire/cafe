@@ -2,7 +2,6 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    // 1. Check if the CAPTCHA has been verified in the current session.
     if (!req.session.captchaVerified) {
       return res.status(403).json({ message: 'Please complete the CAPTCHA verification before registering.' });
     }
@@ -21,7 +20,6 @@ const register = async (req, res) => {
     
     const user = await authService.registerUser({ name, username, password, role, team_id, photoBuffer, registrationKey });
 
-    // 2. Invalidate the CAPTCHA verification after successful registration.
     req.session.captchaVerified = false;
 
     res.status(201).json(user);
@@ -45,7 +43,18 @@ const login = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const { username, registrationKey, newPassword } = req.body;
+        await authService.forgotPassword({ username, registrationKey, newPassword });
+        res.status(200).json({ message: 'Password has been reset successfully.' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 module.exports = {
   register,
   login,
+  forgotPassword
 };

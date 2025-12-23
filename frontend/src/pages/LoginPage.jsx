@@ -110,7 +110,12 @@ const LoginPage = () => {
               />
             )}
           </Box>
-          <Grid container justifyContent="flex-end">
+          <Grid container justifyContent="space-between">
+            <Grid item>
+              <Link to="/forgot-password" variant="body2">
+                Forgot password?
+              </Link>
+            </Grid>
             <Grid item>
               <Link to="/register" variant="body2">
                 Don't have an account? Sign Up

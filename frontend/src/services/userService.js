@@ -19,3 +19,25 @@ export const getAllUsers = async (page = 1, limit = 10, search = '') => {
 
     return { users: adaptedUsers, total };
 };
+
+export const updateUserProfile = async (formData) => {
+    try {
+        const response = await api.put('/users/profile', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response.data;
+    }
+};
+
+export const getUserProfile = async () => {
+    try {
+        const response = await api.get('/users/profile');
+        return response.data;
+    } catch (error) {
+        throw error.response.data;
+    }
+};

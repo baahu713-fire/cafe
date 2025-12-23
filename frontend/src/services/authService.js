@@ -51,4 +51,13 @@ const getCurrentUser = () => {
     }
 };
 
-export { register, login, logout, getCurrentUser };
+const forgotPassword = async (credentials) => {
+    try {
+        const response = await api.post('/auth/forgot-password', credentials);
+        return response.data;
+    } catch (error) {
+        throw error.response.data;
+    }
+};
+
+export { register, login, logout, getCurrentUser, forgotPassword };
