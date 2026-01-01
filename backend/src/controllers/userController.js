@@ -35,6 +35,14 @@ const getActiveUsers = async (req, res, next) => {
 
 const getUserPhoto = async (req, res) => {
     const { userId } = req.params;
+    const authenticatedUserId = req.session.user.id;
+
+    // Authorization Check: A user can only fetch their own photo.
+    // We must parse the userId from params as it's a string.
+    if (parseInt(userId, 10) !== authenticatedUserId) {
+        return res.status(403).json({ message: 'Forbidden: You can only access your own photo.' });
+    }
+
     try {
         const photo = await userService.getUserPhoto(userId);
         if (photo) {
@@ -51,7 +59,7 @@ const getUserPhoto = async (req, res) => {
 
 const updateUserProfile = async (req, res, next) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.session.user.id; // Corrected
         const { name, password } = req.body;
         const photo = req.file ? req.file.buffer : null;
 
@@ -65,7 +73,7 @@ const updateUserProfile = async (req, res, next) => {
 
 const getUserProfile = async (req, res, next) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.session.user.id; // Corrected
         const user = await userService.getUserProfile(userId);
         res.json(user);
     } catch (error) {

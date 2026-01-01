@@ -1,8 +1,5 @@
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
 
 const registerUser = async (userData) => {
   const { name, username, password, role, team_id, photoBuffer, registrationKey } = userData;
@@ -48,14 +45,9 @@ const registerUser = async (userData) => {
 
     await client.query('COMMIT');
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username, role: user.role, teamId: user.team_id },
-      JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
+    // Return the user object without the password
     const { hashed_password, ...userWithoutPassword } = user;
-    return { token, user: userWithoutPassword };
+    return { user: userWithoutPassword };
 
   } catch (error) {
     await client.query('ROLLBACK');
@@ -80,16 +72,60 @@ const loginUser = async (credentials) => {
     throw new Error('Invalid credentials or user not active.');
   }
 
-  const token = jwt.sign(
-    { userId: user.id, username: user.username, role: user.role, teamId: user.team_id },
-    JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-
+  // Return the user object without the password
   const { hashed_password, ...userWithoutPassword } = user;
 
-  return { token, user: userWithoutPassword };
+  return { user: userWithoutPassword };
 };
+
+const beginUserSession = async ({ userId, sessionId, maxConcurrentSessions }) => {
+  const client = await db.pool.connect();
+  let oldestSessionId = null;
+
+  try {
+    await client.query('BEGIN');
+
+    const { rows: sessions } = await client.query(
+      'SELECT session_id, created_at FROM active_sessions WHERE user_id = $1 ORDER BY created_at ASC',
+      [userId]
+    );
+
+    if (sessions.length >= maxConcurrentSessions) {
+      oldestSessionId = sessions[0].session_id;
+      await client.query('DELETE FROM active_sessions WHERE session_id = $1', [oldestSessionId]);
+    }
+
+    await client.query('INSERT INTO active_sessions (session_id, user_id) VALUES ($1, $2)', [sessionId, userId]);
+
+    await client.query('COMMIT');
+
+    return oldestSessionId;
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error in beginUserSession transaction:', error);
+    throw new Error('Could not begin user session.'); // Re-throw to inform the controller
+  } finally {
+    client.release();
+  }
+};
+
+
+const endUserSession = async (sessionId) => {
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM active_sessions WHERE session_id = $1', [sessionId]);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    // Log the error but don't re-throw, as we want to proceed with session destruction.
+    console.error('Error in endUserSession transaction:', error);
+  } finally {
+    client.release();
+  }
+};
+
 
 const forgotPassword = async ({ username, registrationKey, newPassword }) => {
     const client = await db.pool.connect();
@@ -136,5 +172,7 @@ const forgotPassword = async ({ username, registrationKey, newPassword }) => {
 module.exports = {
   registerUser,
   loginUser,
+  beginUserSession,
+  endUserSession,
   forgotPassword
 };

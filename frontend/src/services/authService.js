@@ -7,57 +7,33 @@ const register = async (formData) => {
         },
         withCredentials: true,
     });
-
-    if (response.data.token && response.data.user) {
-        const userPayload = {
-            ...response.data.user,
-            isAdmin: response.data.user.role === 'admin',
-            token: response.data.token,
-        };
-        localStorage.setItem('user', JSON.stringify(userPayload));
-        return userPayload;
-    }
-    throw new Error('Registration failed: Invalid response from server.');
+    return response.data.user;
 };
 
 const login = async (username, password) => {
-    const response = await api.post('/auth/login', {
-        username,
-        password,
-    });
-
-    if (response.data.token && response.data.user) {
-        const userPayload = {
-            ...response.data.user,
-            isAdmin: response.data.user.role === 'admin',
-            token: response.data.token,
-        };
-        localStorage.setItem('user', JSON.stringify(userPayload));
-        return userPayload;
-    }
-    throw new Error('Login failed: Invalid response from server.');
+    const response = await api.post('/auth/login', 
+        { username, password }, 
+        { withCredentials: true }
+    );
+    return response.data.user;
 };
 
-const logout = () => {
-    localStorage.removeItem('user');
+const logout = async () => {
+    await api.post('/auth/logout', {}, { withCredentials: true });
 };
 
-const getCurrentUser = () => {
+const getMe = async () => {
     try {
-        return JSON.parse(localStorage.getItem('user'));
+        const response = await api.get('/auth/me', { withCredentials: true });
+        return response.data.user;
     } catch (error) {
-        console.error("Failed to parse user from localStorage", error);
         return null;
     }
 };
 
 const forgotPassword = async (credentials) => {
-    try {
-        const response = await api.post('/auth/forgot-password', credentials);
-        return response.data;
-    } catch (error) {
-        throw error.response.data;
-    }
+    const response = await api.post('/auth/forgot-password', credentials);
+    return response.data;
 };
 
-export { register, login, logout, getCurrentUser, forgotPassword };
+export { register, login, logout, getMe, forgotPassword };

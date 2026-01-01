@@ -26,8 +26,8 @@ router.get('/profile', authMiddleware, getUserProfile);
 
 // @route   GET /api/users/:userId/photo
 // @desc    Get user photo
-// @access  Public
-router.get('/:userId/photo', getUserPhoto);
+// @access  Private
+router.get('/:userId/photo', authMiddleware, getUserPhoto);
 
 // @route   PUT /api/users/profile
 // @desc    Update user profile

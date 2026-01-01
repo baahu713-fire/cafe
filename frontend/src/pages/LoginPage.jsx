@@ -31,7 +31,16 @@ const LoginPage = () => {
 
     try {
       await login(username, password);
-      navigate(from, { replace: true });
+
+      // Check for a redirect path from session expiration
+      const redirectPath = localStorage.getItem('redirectPath');
+      if (redirectPath) {
+        localStorage.removeItem('redirectPath'); // Clean up after use
+        navigate(redirectPath, { replace: true });
+      } else {
+        // Otherwise, use the path from react-router's state (for protected routes)
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Invalid username or password. Please try again.');
     } finally {

@@ -1,51 +1,37 @@
 import axios from 'axios';
 
-// Create an axios instance
 const api = axios.create({
-    baseURL: '/api', // The base URL for the backend API
+    baseURL: '/api',
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Add a request interceptor to include the token in headers for every request
-api.interceptors.request.use(
-    (config) => {
-        // Get user data from localStorage
-        const user = JSON.parse(localStorage.getItem('user'));
-        
-        // If the user and token exist, add the Authorization header
-        if (user && user.token) {
-            config.headers['Authorization'] = `Bearer ${user.token}`;
-        }
-        
-        return config;
-    },
-    (error) => {
-        // Handle request error
-        return Promise.reject(error);
-    }
-);
-
-// Add a response interceptor to handle global 401 errors
 api.interceptors.response.use(
-    // If the response is successful, just return it
     (response) => response,
-    // If there's an error, handle it
     (error) => {
-        // Check if the error is a 401 Unauthorized
-        if (error.response && error.response.status === 401) {
-            console.log('Session expired. Logging out.');
-            
-            // Perform the core logout actions directly to avoid circular dependencies
-            localStorage.removeItem('user');
-            
-            // Reload the page. The routing logic will see that the user is no longer
-            // authenticated and automatically redirect to the login page.
-            window.location.reload();
+        const { config, response } = error;
+
+        // Check for 401 Unauthorized error
+        if (response && response.status === 401 && config.url !== '/auth/me') {
+            const currentPath = window.location.pathname;
+
+            // If the 401 occurs anywhere OTHER than the login page, it's a session timeout.
+            // In that case, save the current location and redirect to login.
+            if (currentPath !== '/login') {
+                localStorage.setItem('redirectPath', currentPath);
+                window.location.href = '/login';
+                
+                // Resolve the promise because we've handled the error by redirecting.
+                return Promise.resolve();
+            }
+            // If we are ALREADY on the login page, a 401 means invalid credentials.
+            // We must NOT redirect. We will let the promise reject so the LoginPage
+            // can catch the error and display a message to the user.
         }
-        
-        // For any other errors, just reject the promise so the calling code can handle it
+
+        // For all other errors, or for 401s on the login page, reject the promise.
         return Promise.reject(error);
     }
 );

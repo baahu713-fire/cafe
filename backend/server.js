@@ -36,7 +36,10 @@ if (process.env.DEV_ORIGIN) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 
+    || /\.web\.app$/.test(origin) 
+    || /\.firebaseapp\.com$/.test(origin)
+    || /\.cloudworkstations\.dev$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -45,8 +48,8 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
-// app.use(cors());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Standard middleware
@@ -97,7 +100,7 @@ const startServer = async () => {
         cookie: {
           secure: process.env.NODE_ENV === 'production',
           httpOnly: true,
-          maxAge: 10 * 60 * 1000,
+          maxAge: 60 * 60 * 1000, // Changed to 1 hour
           sameSite: 'lax',
         },
       })

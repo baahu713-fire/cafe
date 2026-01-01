@@ -1,28 +1,21 @@
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
-
 const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication token is required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: error.message || 'Invalid or expired token' });
+  // Check if the server has successfully populated req.session.user after a valid cookie was sent
+  if (req.session && req.session.user) {
+    return next(); // User is authenticated, proceed.
+  } else {
+    // If no valid session exists, reject the request
+    res.status(401).json({ message: 'Not authenticated' });
   }
 };
 
 const admin = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({ message: 'Not authorized as an admin' });
-    }
+  // Check for a valid session and if the user has the 'admin' role
+  if (req.session && req.session.user && req.session.user.role === 'admin') {
+    return next(); // User is an admin, proceed.
+  } else {
+    // If user is not an admin, reject the request
+    res.status(403).json({ message: 'Not authorized as an admin' });
+  }
 };
 
 module.exports = { authMiddleware, admin };

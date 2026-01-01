@@ -3,10 +3,10 @@ const ORDER_STATUS = require('../constants/orderStatus');
 
 const createOrder = async (req, res) => {
   try {
-    const requestingUser = req.user;
+    const requestingUser = req.session.user; // Corrected
     const { userId: userIdToOrderFor, ...orderData } = req.body;
 
-    let finalUserId = requestingUser.userId;
+    let finalUserId = requestingUser.id; // Corrected
 
     if (requestingUser.role === 'admin' && userIdToOrderFor) {
         finalUserId = userIdToOrderFor;
@@ -33,7 +33,7 @@ const getAllOrders = async (req, res) => {
 
 const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.session.user.id; // Corrected
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5; 
     const result = await orderService.getOrdersByUserId(userId, page, limit);
@@ -45,7 +45,7 @@ const getMyOrders = async (req, res) => {
 
 const getOrderById = async (req, res) => {
   try {
-    const user = req.user;
+    const user = req.session.user; // Corrected
     const order = await orderService.getOrderById(req.params.id, user);
     res.json(order);
   } catch (error) {
@@ -72,7 +72,7 @@ const updateOrderStatus = async (req, res) => {
 const cancelOrder = async (req, res) => {
     try {
         const orderId = req.params.id;
-        const user = req.user; // The full user object from authMiddleware
+        const user = req.session.user; // Corrected
         const updatedOrder = await orderService.cancelOrder(orderId, user);
         res.json(updatedOrder);
     } catch (error) {
@@ -91,7 +91,7 @@ const cancelOrder = async (req, res) => {
 const disputeOrder = async (req, res) => {
     try {
         const orderId = req.params.id;
-        const userId = req.user.userId;
+        const userId = req.session.user.id; // Corrected
         const updatedOrder = await orderService.disputeOrder(orderId, userId);
         res.json(updatedOrder);
     } catch (error) {
@@ -101,7 +101,7 @@ const disputeOrder = async (req, res) => {
 
 const addFeedback = async (req, res) => {
     const { orderId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.session.user.id; // Corrected
     const { rating, comment } = req.body;
 
     const numericRating = Number(rating);

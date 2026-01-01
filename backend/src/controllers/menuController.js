@@ -36,6 +36,15 @@ const createItem = async (req, res) => {
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
     }
+
+    // Backend validation for price and proportions
+    if (itemData.proportions && itemData.proportions.length > 0) {
+        const minProportionPrice = Math.min(...itemData.proportions.map(p => parseFloat(p.price)));
+        if (parseFloat(itemData.price) !== minProportionPrice) {
+            return res.status(400).json({ message: 'The item\'s main price must be equal to the smallest proportion price.' });
+        }
+    }
+
     const newItem = await menuService.createMenuItem(itemData);
     res.status(201).json(newItem);
   } catch (error) {
@@ -52,6 +61,15 @@ const updateItem = async (req, res) => {
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
     }
+
+    // Backend validation for price and proportions
+    if (itemData.proportions && itemData.proportions.length > 0) {
+        const minProportionPrice = Math.min(...itemData.proportions.map(p => parseFloat(p.price)));
+        if (parseFloat(itemData.price) !== minProportionPrice) {
+            return res.status(400).json({ message: 'The item\'s main price must be equal to the smallest proportion price.' });
+        }
+    }
+
     const updatedItem = await menuService.updateMenuItem(req.params.id, itemData);
     res.json(updatedItem);
   } catch (error) {

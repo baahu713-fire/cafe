@@ -96,6 +96,15 @@ const MenuManagement = () => { // Remove user prop
             return;
         }
 
+        // New validation rule
+        if (currentItem.proportions && currentItem.proportions.length > 0) {
+            const minProportionPrice = Math.min(...currentItem.proportions.map(p => parseFloat(p.price)));
+            if (parseFloat(currentItem.price) !== minProportionPrice) {
+                setFormError('The item\'s main price must be equal to the smallest proportion price.');
+                return;
+            }
+        }
+
         setIsSaving(true);
         try {
             const formData = new FormData();
