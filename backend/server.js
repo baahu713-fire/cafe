@@ -37,8 +37,6 @@ if (process.env.DEV_ORIGIN) {
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.indexOf(origin) !== -1 
-    || /\.web\.app$/.test(origin) 
-    || /\.firebaseapp\.com$/.test(origin)
     || /\.cloudworkstations\.dev$/.test(origin)) {
       callback(null, true);
     } else {
@@ -63,6 +61,12 @@ const apiLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
+  // keyGenerator: (req, res) => {
+  //   // Use the client's IP from the 'X-Forwarded-For' header, or fall back to the direct IP.
+  //   // This is crucial for environments behind a proxy (like Docker).
+  //   const forwardedIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null;
+  //   return forwardedIp || req.ip;
+  // },
 });
 app.use('/api/', apiLimiter);
 
@@ -100,12 +104,21 @@ const startServer = async () => {
         cookie: {
           secure: process.env.NODE_ENV === 'production',
           httpOnly: true,
-          maxAge: 60 * 60 * 1000, // Changed to 1 hour
+          maxAge: 60 * 60 * 1000,
           sameSite: 'lax',
         },
       })
     );
 
+    // ==================================================================
+    //   app.get('/api/check-ip', (req, res) => {
+    //     res.json({
+    //         message: "IP Debugging",
+    //         ip_seen_by_express: req.ip, // This is what Rate Limit uses
+    //         x_forwarded_for: req.headers['x-forwarded-for'] || 'Not present'
+    //     });
+    // });
+    // ==================================================================
     // Register API Routes
     app.use('/api/auth', authRoutes);
     app.use('/api/teams', teamRoutes);

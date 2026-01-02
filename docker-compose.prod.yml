@@ -46,7 +46,10 @@ services:
       dockerfile: Dockerfile.prod
     image: cafe_frontend:latest
     ports:
-      - "80:80"
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
     networks:
       - cafe_network
     depends_on:

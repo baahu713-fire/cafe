@@ -162,10 +162,12 @@ const OrderManagement = () => {
     return orders
       .filter(order => {
         const searchTermLower = searchTerm.toLowerCase();
+        const userNameMatch = order.user_name && order.user_name.toLowerCase().includes(searchTermLower);
+        const usernameMatch = order.username && order.username.toLowerCase().includes(searchTermLower);
         return (
           order.id.toString().includes(searchTermLower) ||
-          order.user_name.toLowerCase().includes(searchTermLower) ||
-          order.username.toLowerCase().includes(searchTermLower) ||
+          userNameMatch ||
+          usernameMatch ||
           order.status.toLowerCase().includes(searchTermLower)
         );
       })

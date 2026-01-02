@@ -35,11 +35,10 @@ const getActiveUsers = async (req, res, next) => {
 
 const getUserPhoto = async (req, res) => {
     const { userId } = req.params;
-    const authenticatedUserId = req.session.user.id;
+    const authenticatedUser = req.session.user;
 
-    // Authorization Check: A user can only fetch their own photo.
-    // We must parse the userId from params as it's a string.
-    if (parseInt(userId, 10) !== authenticatedUserId) {
+    // Authorization Check: Allow access if the user is an admin or is requesting their own photo.
+    if (authenticatedUser.role !== 'admin' && parseInt(userId, 10) !== authenticatedUser.id) {
         return res.status(403).json({ message: 'Forbidden: You can only access your own photo.' });
     }
 
