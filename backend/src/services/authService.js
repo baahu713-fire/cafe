@@ -78,7 +78,7 @@ const loginUser = async (credentials) => {
   return { user: userWithoutPassword };
 };
 
-const beginUserSession = async ({ userId, sessionId, maxConcurrentSessions }) => {
+const beginUserSession = async ({ userId, sessionId, clientIp, maxConcurrentSessions }) => {
   const client = await db.pool.connect();
   let oldestSessionId = null;
 
@@ -95,7 +95,7 @@ const beginUserSession = async ({ userId, sessionId, maxConcurrentSessions }) =>
       await client.query('DELETE FROM active_sessions WHERE session_id = $1', [oldestSessionId]);
     }
 
-    await client.query('INSERT INTO active_sessions (session_id, user_id) VALUES ($1, $2)', [sessionId, userId]);
+    await client.query('INSERT INTO active_sessions (session_id, user_id, client_ip) VALUES ($1, $2, $3)', [sessionId, userId, clientIp]);
 
     await client.query('COMMIT');
 

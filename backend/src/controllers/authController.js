@@ -19,6 +19,7 @@ const register = async (req, res) => {
     }
 
     const photoBuffer = req.file.buffer;
+    const clientIp = req.ip; // Get client IP
 
     // 1. Register the user (DB transaction in the service)
     const { user } = await authService.registerUser({ name, username, password, role, team_id, photoBuffer, registrationKey });
@@ -27,6 +28,7 @@ const register = async (req, res) => {
     await authService.beginUserSession({
       userId: user.id,
       sessionId: req.session.id,
+      clientIp: clientIp, // Pass client IP
       maxConcurrentSessions: MAX_CONCURRENT_SESSIONS
     });
 
@@ -49,6 +51,8 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
+    const clientIp = req.ip; // Get client IP
+
     // 1. Authenticate the user
     const { user } = await authService.loginUser(req.body);
 
@@ -56,6 +60,7 @@ const login = async (req, res) => {
     const oldestSessionId = await authService.beginUserSession({
       userId: user.id,
       sessionId: req.session.id,
+      clientIp: clientIp, // Pass client IP
       maxConcurrentSessions: MAX_CONCURRENT_SESSIONS
     });
 
