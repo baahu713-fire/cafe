@@ -10,8 +10,9 @@ import {
 } from '@mui/material';
 import MenuManagement from '../components/admin/MenuManagement';
 import OrderManagement from '../components/admin/OrderManagement';
-import UserManagement from '../components/admin/UserManagement';
-import { useAuth } from '../contexts/AuthContext'; // Import useAuth
+import SettlementUserBills from '../components/admin/SettlementUserBills';
+import ManageUsers from '../components/admin/ManageUsers';
+import { useAuth } from '../contexts/AuthContext';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -33,17 +34,21 @@ function TabPanel(props) {
   );
 }
 
-const AdminPage = () => { // Remove user prop
-  const { user } = useAuth(); // Get user from AuthContext
+const AdminPage = () => {
+  const { user } = useAuth();
   const [value, setValue] = useState(0);
 
-  if (!user || !user.isAdmin) {
+  // Redirect if user is not an admin or superadmin
+  if (!user || ( !(user.isAdmin || user.isSuperAdmin) )) {
     return <Navigate to="/" />;
   }
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
+
+  const isAdmin = user.isAdmin;
+  const isSuperAdmin = user.isSuperAdmin;
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -57,7 +62,8 @@ const AdminPage = () => { // Remove user prop
           <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" centered>
             <Tab label="Manage Orders" />
             <Tab label="Manage Items" />
-            <Tab label="Manage Users" />
+            <Tab label="Settlement User Bills" />
+            {isSuperAdmin && <Tab label="Manage Users" />}
           </Tabs>
         </Box>
         <TabPanel value={value} index={0}>
@@ -67,8 +73,13 @@ const AdminPage = () => { // Remove user prop
           <MenuManagement />
         </TabPanel>
         <TabPanel value={value} index={2}>
-          <UserManagement />
+          <SettlementUserBills />
         </TabPanel>
+        {isSuperAdmin && (
+          <TabPanel value={value} index={3}>
+            <ManageUsers />
+          </TabPanel>
+        )}
       </Box>
     </Container>
   );

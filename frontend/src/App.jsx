@@ -14,6 +14,7 @@ import theme from './theme.js';
 import AppNav from './components/AppBar.jsx';
 import Footer from './components/Footer.jsx';
 import MenuPage from './pages/MenuPage.jsx';
+import DailySpecialsPage from './pages/DailySpecialsPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
@@ -46,6 +47,7 @@ const App = () => {
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/menu" />} />
             <Route path="/menu" element={<MenuPage />} />
+            <Route path="/daily-specials" element={<DailySpecialsPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

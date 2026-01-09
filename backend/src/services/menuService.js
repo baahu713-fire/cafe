@@ -5,6 +5,11 @@ const getAllMenuItems = async () => {
     return rows;
 };
 
+const getMenuItemsByCategory = async (category) => {
+    const { rows } = await db.query('SELECT * FROM menu_items WHERE availability = $1 AND deleted_from IS NULL ORDER BY name', [category]);
+    return rows;
+};
+
 const getMenuItemById = async (itemId) => {
     const { rows } = await db.query('SELECT * FROM menu_items WHERE id = $1 AND deleted_from IS NULL', [itemId]);
     if (rows.length === 0) {
@@ -86,6 +91,7 @@ const softDeleteMenuItem = async (itemId) => {
 
 module.exports = {
     getAllMenuItems,
+    getMenuItemsByCategory,
     getMenuItemById,
     createMenuItem,
     updateMenuItem,

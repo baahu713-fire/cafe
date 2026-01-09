@@ -5,6 +5,11 @@ export const getMenu = async () => {
     return response.data;
 };
 
+export const getMenuItemsByCategory = async (category) => {
+    const response = await api.get(`/menu/category/${category}`);
+    return response.data;
+};
+
 export const addMenuItem = async (formData) => {
     const response = await api.post('/menu', formData, {
         headers: {

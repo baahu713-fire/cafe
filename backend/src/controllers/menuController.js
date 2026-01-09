@@ -15,6 +15,21 @@ const getAllItems = async (req, res) => {
   }
 };
 
+const getItemsByCategory = async (req, res) => {
+  try {
+    const items = await menuService.getMenuItemsByCategory(req.params.category);
+    const itemsWithImages = items.map(item => {
+      if (item.image_data) {
+        item.image_data = `data:image/jpeg;base64,${Buffer.from(item.image_data).toString('base64')}`;
+      }
+      return item;
+    });
+    res.json(itemsWithImages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getItemById = async (req, res) => {
   try {
     const item = await menuService.getMenuItemById(req.params.id);
@@ -94,6 +109,7 @@ const softDeleteItem = async (req, res) => {
 
 module.exports = {
   getAllItems,
+  getItemsByCategory,
   getItemById,
   createItem,
   updateItem,

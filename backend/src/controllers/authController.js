@@ -1,7 +1,5 @@
 const authService = require('../services/authService');
 
-const MAX_CONCURRENT_SESSIONS = 1; // Configurable session limit
-
 const register = async (req, res) => {
   try {
     if (!req.session.captchaVerified) {
@@ -27,9 +25,9 @@ const register = async (req, res) => {
     // 2. Begin the user session (DB transaction in the service)
     await authService.beginUserSession({
       userId: user.id,
+      userRole: user.role, // Pass user role
       sessionId: req.session.id,
       clientIp: clientIp, // Pass client IP
-      maxConcurrentSessions: MAX_CONCURRENT_SESSIONS
     });
 
     // 3. Set session data and clear captcha flag
@@ -59,9 +57,9 @@ const login = async (req, res) => {
     // 2. Handle session management (DB transaction in the service)
     const oldestSessionId = await authService.beginUserSession({
       userId: user.id,
+      userRole: user.role, // Pass user role
       sessionId: req.session.id,
       clientIp: clientIp, // Pass client IP
-      maxConcurrentSessions: MAX_CONCURRENT_SESSIONS
     });
 
     // 3. If a session was removed, destroy it in the session store

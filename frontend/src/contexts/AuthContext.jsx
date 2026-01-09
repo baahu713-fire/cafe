@@ -18,10 +18,11 @@ export const AuthProvider = ({ children }) => {
         if (!userData) {
             return null;
         }
-        // Create the 'isAdmin' boolean based on the 'role' string
+        // Create the 'isAdmin' and 'isSuperAdmin' booleans based on the 'role' string
         return {
             ...userData,
-            isAdmin: userData.role === 'admin'
+            isAdmin: userData.role === 'admin' || userData.role === 'superadmin',
+            isSuperAdmin: userData.role === 'superadmin'
         };
     };
 

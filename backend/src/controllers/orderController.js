@@ -8,7 +8,8 @@ const createOrder = async (req, res) => {
 
     let finalUserId = requestingUser.id; // Corrected
 
-    if (requestingUser.role === 'admin' && userIdToOrderFor) {
+    const isAdmin = requestingUser.role === 'admin' || requestingUser.role === 'superadmin';
+    if (isAdmin && userIdToOrderFor) {
         finalUserId = userIdToOrderFor;
     }
 

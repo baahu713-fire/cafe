@@ -78,12 +78,25 @@ const loginUser = async (credentials) => {
   return { user: userWithoutPassword };
 };
 
-const beginUserSession = async ({ userId, sessionId, clientIp, maxConcurrentSessions }) => {
+const beginUserSession = async ({ userId, userRole, sessionId, clientIp }) => {
   const client = await db.pool.connect();
   let oldestSessionId = null;
 
   try {
     await client.query('BEGIN');
+
+    // Get max concurrent sessions for the user's role
+    const permissionsResult = await client.query(
+      'SELECT max_concurrent_sessions FROM role_permissions WHERE role = $1',
+      [userRole]
+    );
+
+    let maxConcurrentSessions = 1; // Default value
+    if (permissionsResult.rows.length > 0) {
+      maxConcurrentSessions = permissionsResult.rows[0].max_concurrent_sessions;
+    } else {
+      console.warn(`Role '${userRole}' not found in role_permissions. Defaulting to 1 session.`);
+    }
 
     const { rows: sessions } = await client.query(
       'SELECT session_id, created_at FROM active_sessions WHERE user_id = $1 ORDER BY created_at ASC',
@@ -104,7 +117,7 @@ const beginUserSession = async ({ userId, sessionId, clientIp, maxConcurrentSess
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error in beginUserSession transaction:', error);
-    throw new Error('Could not begin user session.'); // Re-throw to inform the controller
+    throw new Error('Could not begin user session.');
   } finally {
     client.release();
   }
@@ -119,7 +132,6 @@ const endUserSession = async (sessionId) => {
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
-    // Log the error but don't re-throw, as we want to proceed with session destruction.
     console.error('Error in endUserSession transaction:', error);
   } finally {
     client.release();
@@ -132,14 +144,12 @@ const forgotPassword = async ({ username, registrationKey, newPassword }) => {
     try {
         await client.query('BEGIN');
 
-        // Find the user by username
         const userResult = await client.query('SELECT id FROM users WHERE username = $1', [username]);
         if (userResult.rows.length === 0) {
             throw new Error('User not found.');
         }
         const userId = userResult.rows[0].id;
 
-        // Find the registration key and check if it was used by this user
         const keyResult = await client.query(
             'SELECT id, used_by_user_id FROM registration_keys WHERE registration_key = $1',
             [registrationKey]
@@ -154,10 +164,8 @@ const forgotPassword = async ({ username, registrationKey, newPassword }) => {
             throw new Error('This registration key is not associated with this user.');
         }
 
-        // Hash the new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update the user's password
         await client.query('UPDATE users SET hashed_password = $1 WHERE id = $2', [hashedPassword, userId]);
 
         await client.query('COMMIT');

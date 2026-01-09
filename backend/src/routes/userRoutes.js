@@ -1,7 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { getUsers, getAllUsers, getActiveUsers, getUserPhoto, updateUserProfile, getUserProfile } = require('../controllers/userController');
-const { authMiddleware, admin } = require('../middleware/authMiddleware');
+const { 
+    getUsers, 
+    getAllUsers, 
+    getAllUsersForSuperAdmin, 
+    getActiveUsers, 
+    getUserPhoto, 
+    updateUserProfile, 
+    getUserProfile, 
+    updateUserStatus, 
+    updateUserBySuperAdmin, 
+    changeUserPasswordBySuperAdmin 
+} = require('../controllers/userController');
+const { authMiddleware, admin, superadmin } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
 
 // @route   GET /api/users
@@ -11,8 +22,8 @@ router.get('/', authMiddleware, admin, getUsers);
 
 // @route   GET /api/users/all
 // @desc    Get all users for admin
-// @access  Private/Admin
-router.get('/all', authMiddleware, admin, getAllUsers);
+// @access  Private/Superadmin
+router.get('/all', authMiddleware, superadmin, getAllUsersForSuperAdmin);
 
 // @route   GET /api/users/active
 // @desc    Get all active users for admin order placement
@@ -33,5 +44,20 @@ router.get('/:userId/photo', authMiddleware, getUserPhoto);
 // @desc    Update user profile
 // @access  Private
 router.put('/profile', authMiddleware, upload, updateUserProfile);
+
+// @route   PATCH /api/users/:userId/status
+// @desc    Update user status
+// @access  Private/Superadmin
+router.patch('/:userId/status', authMiddleware, superadmin, updateUserStatus);
+
+// @route   PATCH /api/users/:userId/details
+// @desc    Update user details by superadmin
+// @access  Private/Superadmin
+router.patch('/:userId/details', authMiddleware, superadmin, upload, updateUserBySuperAdmin);
+
+// @route   PATCH /api/users/:userId/password
+// @desc    Change user password by superadmin
+// @access  Private/Superadmin
+router.patch('/:userId/password', authMiddleware, superadmin, changeUserPasswordBySuperAdmin);
 
 module.exports = router;

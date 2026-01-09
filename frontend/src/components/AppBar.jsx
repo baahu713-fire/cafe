@@ -74,6 +74,7 @@ const AppNav = () => {
       onClose={handleMenuClose}
     >
       <MenuItem component={RouterLink} to="/menu" onClick={handleMenuClose}>Menu</MenuItem>
+      <MenuItem component={RouterLink} to="/daily-specials" onClick={handleMenuClose}>Daily Specials</MenuItem>
       {user && !user.isAdmin && (
         <MenuItem component={RouterLink} to="/orders" onClick={handleMenuClose}>My Orders</MenuItem>
       )}
@@ -148,6 +149,9 @@ const AppNav = () => {
               <Box sx={{ flexGrow: 1, display: 'flex', ml: 2 }}>
                 <Button color="inherit" component={RouterLink} to="/menu">
                   Menu
+                </Button>
+                <Button color="inherit" component={RouterLink} to="/daily-specials">
+                  Daily Specials
                 </Button>
                 {user && !user.isAdmin && (
                   <Button color="inherit" component={RouterLink} to="/orders">

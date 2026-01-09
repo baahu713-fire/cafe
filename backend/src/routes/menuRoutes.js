@@ -9,6 +9,7 @@ const upload = multer({ storage: storage });
 
 // Public routes for viewing menu items
 router.get('/', menuController.getAllItems);
+router.get('/category/:category', menuController.getItemsByCategory);
 router.get('/:id', menuController.getItemById);
 
 // Admin-only routes for modifying menu items
