@@ -16,7 +16,7 @@ import {
     FormControl,
     FormControlLabel
 } from '@mui/material';
-import { Favorite, FavoriteBorder } from '@mui/icons-material';
+import { Add, Remove, Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useCart } from '../hooks/useCart';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -68,13 +68,16 @@ const ProportionSelectionDialog = ({ open, onClose, item, onAddToCart }) => {
 };
 
 const MenuItemCard = ({ item }) => {
-    const { addToCart } = useCart();
+    const { cart, addToCart, updateQuantity } = useCart();
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     // Correctly use the `available` boolean field.
     const isAvailable = item.available;
     const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price));
+
+    const cartItem = cart.find(i => i.id === item.id);
+    const quantity = cartItem ? cartItem.quantity : 0;
 
     const handleToggleFavorite = () => {
         if (isFavorite(item.id)) {
@@ -155,19 +158,31 @@ const MenuItemCard = ({ item }) => {
                     </Typography>
                 )}
 
-                <Button 
-                    variant="contained" 
-                    onClick={handleAddToCartClick}
-                    disabled={!isPurchasable} // Disable button if not purchasable
-                    sx={{ 
-                        backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.main',
-                        '&:hover': {
-                            backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.dark',
-                        },
-                    }}
-                >
-                    {isPurchasable ? 'Add to Cart' : 'Unavailable'}
-                </Button>
+                {quantity > 0 ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                        <IconButton onClick={() => updateQuantity(item.id, quantity - 1)} size="small">
+                            <Remove />
+                        </IconButton>
+                        <Typography variant="h6" sx={{ mx: 2 }}>{quantity}</Typography>
+                        <IconButton onClick={() => updateQuantity(item.id, quantity + 1)} size="small">
+                            <Add />
+                        </IconButton>
+                    </Box>
+                ) : (
+                    <Button 
+                        variant="contained" 
+                        onClick={handleAddToCartClick}
+                        disabled={!isPurchasable} // Disable button if not purchasable
+                        sx={{ 
+                            backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.main',
+                            '&:hover': {
+                                backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.dark',
+                            },
+                        }}
+                    >
+                        {isPurchasable ? 'Add to Cart' : 'Unavailable'}
+                    </Button>
+                )}
             </Box>
             
             <ProportionSelectionDialog

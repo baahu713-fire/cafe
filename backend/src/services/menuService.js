@@ -6,7 +6,7 @@ const getAllMenuItems = async () => {
 };
 
 const getMenuItemsByCategory = async (category) => {
-    const { rows } = await db.query('SELECT * FROM menu_items WHERE availability = $1 AND deleted_from IS NULL ORDER BY name', [category]);
+    const { rows } = await db.query('SELECT * FROM menu_items WHERE $1 = ANY(availability) AND deleted_from IS NULL ORDER BY name', [category]);
     return rows;
 };
 
