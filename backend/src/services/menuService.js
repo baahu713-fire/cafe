@@ -1,7 +1,29 @@
 const db = require('../config/database');
 
+/**
+ * Get menu items for the Menu page (public).
+ * Only items where category is NULL or not in ('breakfast', 'lunch') are shown.
+ * Breakfast/lunch items are daily specials only.
+ */
 const getAllMenuItems = async () => {
-    const { rows } = await db.query('SELECT * FROM menu_items WHERE deleted_from IS NULL ORDER BY name');
+    const { rows } = await db.query(
+        `SELECT * FROM menu_items 
+         WHERE deleted_from IS NULL 
+         AND (category IS NULL OR category NOT IN ('breakfast', 'lunch'))
+         ORDER BY name`
+    );
+    return rows;
+};
+
+/**
+ * Get ALL menu items for Admin page (no category filtering).
+ */
+const getAllMenuItemsAdmin = async () => {
+    const { rows } = await db.query(
+        `SELECT * FROM menu_items 
+         WHERE deleted_from IS NULL 
+         ORDER BY name`
+    );
     return rows;
 };
 
@@ -95,6 +117,7 @@ const softDeleteMenuItem = async (itemId) => {
 
 module.exports = {
     getAllMenuItems,
+    getAllMenuItemsAdmin,
     getMenuItemsByCategory,
     getMenuItemById,
     createMenuItem,

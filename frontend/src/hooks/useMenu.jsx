@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getMenu as fetchMenuFromDB, addMenuItem, updateMenuItem, deleteMenuItem } from '../services/menuService';
+import { getMenu as fetchMenuFromDB, getMenuAdmin, addMenuItem, updateMenuItem, deleteMenuItem } from '../services/menuService';
 
-const useMenu = () => {
+/**
+ * Hook for menu items
+ * @param {Object} options - Options
+ * @param {boolean} options.isAdmin - If true, fetches ALL items (no category filtering)
+ */
+const useMenu = (options = {}) => {
+  const { isAdmin = false } = options;
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,7 +15,8 @@ const useMenu = () => {
   const fetchMenu = useCallback(async () => {
     try {
       setLoading(true);
-      const items = await fetchMenuFromDB();
+      // Use admin endpoint if isAdmin is true
+      const items = isAdmin ? await getMenuAdmin() : await fetchMenuFromDB();
       setMenuItems(items);
       setError(null);
     } catch (err) {
@@ -18,7 +25,7 @@ const useMenu = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     fetchMenu();
@@ -51,3 +58,4 @@ const useMenu = () => {
 };
 
 export default useMenu;
+

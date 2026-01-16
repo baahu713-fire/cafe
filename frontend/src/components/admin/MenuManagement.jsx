@@ -36,7 +36,7 @@ const MenuManagement = () => { // Remove user prop
         updateMenuItem,
         deleteMenuItem,
         fetchMenu
-    } = useMenu();
+    } = useMenu({ isAdmin: true }); // Fetch ALL items for admin (no category filtering)
 
     const [formOpen, setFormOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState(null);

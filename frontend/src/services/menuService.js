@@ -5,6 +5,14 @@ export const getMenu = async () => {
     return response.data;
 };
 
+/**
+ * Get all menu items for admin (no category filtering)
+ */
+export const getMenuAdmin = async () => {
+    const response = await api.get('/menu/admin/all');
+    return response.data;
+};
+
 export const getMenuItemsByCategory = async (category) => {
     const response = await api.get(`/menu/category/${category}`);
     return response.data;
