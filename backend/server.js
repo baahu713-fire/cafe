@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const compression = require('compression');
 const { getRedisClient } = require('./src/config/redis');
+const { UPLOAD_LIMITS } = require('./src/constants/uploadLimits');
 
 // Import routes
 const authRoutes = require('./src/routes/authRoutes');
@@ -153,8 +154,13 @@ const startServer = async () => {
     app.use((err, req, res, next) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ message: 'File is too large. Max 100KB.' });
+          const maxSizeKB = req.uploadMaxSize ? Math.round(req.uploadMaxSize / 1024) : Math.round(UPLOAD_LIMITS.DEFAULT / 1024);
+          return res.status(400).json({ message: `File is too large. Maximum allowed size is ${maxSizeKB}KB.` });
         }
+        return res.status(400).json({ message: err.message });
+      }
+      // Handle custom multer file filter errors
+      if (err.message && err.message.includes('image files')) {
         return res.status(400).json({ message: err.message });
       }
       next(err);

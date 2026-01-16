@@ -1,19 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    getUsers, 
-    getAllUsers, 
-    getAllUsersForSuperAdmin, 
-    getActiveUsers, 
-    getUserPhoto, 
-    updateUserProfile, 
-    getUserProfile, 
-    updateUserStatus, 
-    updateUserBySuperAdmin, 
-    changeUserPasswordBySuperAdmin 
+const {
+    getUsers,
+    getAllUsers,
+    getAllUsersForSuperAdmin,
+    getActiveUsers,
+    getUserPhoto,
+    updateUserProfile,
+    getUserProfile,
+    updateUserStatus,
+    updateUserBySuperAdmin,
+    changeUserPasswordBySuperAdmin
 } = require('../controllers/userController');
 const { authMiddleware, admin, superadmin } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
+
+const { uploads } = require('../middleware/upload');
 
 // @route   GET /api/users
 // @desc    Get all users
@@ -43,7 +45,7 @@ router.get('/:userId/photo', authMiddleware, getUserPhoto);
 // @route   PUT /api/users/profile
 // @desc    Update user profile
 // @access  Private
-router.put('/profile', authMiddleware, upload, updateUserProfile);
+router.put('/profile', authMiddleware, uploads.userPhoto, updateUserProfile);
 
 // @route   PATCH /api/users/:userId/status
 // @desc    Update user status
@@ -53,7 +55,7 @@ router.patch('/:userId/status', authMiddleware, superadmin, updateUserStatus);
 // @route   PATCH /api/users/:userId/details
 // @desc    Update user details by superadmin
 // @access  Private/Superadmin
-router.patch('/:userId/details', authMiddleware, superadmin, upload, updateUserBySuperAdmin);
+router.patch('/:userId/details', authMiddleware, superadmin, uploads.userPhoto, updateUserBySuperAdmin);
 
 // @route   PATCH /api/users/:userId/password
 // @desc    Change user password by superadmin

@@ -128,7 +128,7 @@ const AppNav = () => {
       <AppBar position="sticky" sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.text.primary, boxShadow: 'none' }}>
         <Toolbar>
           <Typography variant="h6" component={RouterLink} to="/" sx={{ color: theme.palette.primary.main, textDecoration: 'none', fontWeight: 700 }}>
-            CyberCafe
+            The Cafe Central
           </Typography>
 
           {isMobile ? (

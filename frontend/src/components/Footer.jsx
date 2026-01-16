@@ -14,7 +14,7 @@ function Footer() {
         px: 2,
         mt: 'auto',
         //backgroundColor: theme.palette.mode === 'light' ? theme.palette.grey[200] : theme.palette.grey[800],
-        background:'#fff'
+        background: '#fff'
         //borderTop: `1px solid ${theme.palette.divider}`
       }}
     >
@@ -24,7 +24,7 @@ function Footer() {
           {new Date().getFullYear()}
           {' '}
           <RouterLink to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-            CyberCafe
+            The Cafe Central
           </RouterLink>
           . All rights reserved.
         </Typography>
