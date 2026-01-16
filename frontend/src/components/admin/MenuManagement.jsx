@@ -1,25 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import useMenu from '../../hooks/useMenu';
 import {
-  Box,
-  Button,
-  CircularProgress,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  IconButton,
-  Typography,
-  DialogContentText
+    Box,
+    Button,
+    CircularProgress,
+    Alert,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    TextField,
+    IconButton,
+    Typography,
+    DialogContentText
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -65,9 +65,9 @@ const MenuManagement = () => { // Remove user prop
                 availability = item.availability.split(',').map(s => s.trim());
             }
 
-            setCurrentItem({ ...item, proportions, availability, image: null }); // Set image to null initially
+            setCurrentItem({ ...item, proportions, availability, image: null, category: item.category || '', day_of_week: item.day_of_week || '' });
         } else {
-            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true });
+            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true, category: '', day_of_week: '' });
         }
         setFormOpen(true);
     };
@@ -112,7 +112,7 @@ const MenuManagement = () => { // Remove user prop
             formData.append('price', parseFloat(currentItem.price));
             formData.append('description', currentItem.description);
             formData.append('available', currentItem.available);
-            
+
             if (currentItem.image) {
                 formData.append('image', currentItem.image);
             }
@@ -121,6 +121,8 @@ const MenuManagement = () => { // Remove user prop
             if (currentItem.proportions && currentItem.proportions.length > 0) {
                 formData.append('proportions', JSON.stringify(currentItem.proportions));
             }
+            formData.append('category', currentItem.category || '');
+            formData.append('day_of_week', currentItem.day_of_week || '');
 
 
             if (currentItem.id) {
@@ -162,12 +164,12 @@ const MenuManagement = () => { // Remove user prop
 
     const filteredMenu = useMemo(() => {
         if (!menuItems) return [];
-        return menuItems.filter(item => 
+        return menuItems.filter(item =>
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [menuItems, searchTerm]);
-    
+
     if (loading) return <CircularProgress />;
     if (error) return <Alert severity="error">{error}</Alert>;
 
@@ -177,7 +179,7 @@ const MenuManagement = () => { // Remove user prop
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>Menu Management</Typography>
                 <Button variant="contained" onClick={() => handleFormOpen()}>Add New Item</Button>
             </Box>
-            <TextField 
+            <TextField
                 label="Search by Name or Description"
                 variant="outlined"
                 fullWidth
@@ -187,15 +189,15 @@ const MenuManagement = () => { // Remove user prop
             />
             <TableContainer component={Paper} sx={{ borderRadius: '16px' }}>
                 <Table>
-                    <TableHead><TableRow><TableCell>Image</TableCell><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Description</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
+                    <TableHead><TableRow><TableCell>Image</TableCell><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Daily Special</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
                     <TableBody>
                         {filteredMenu.map(item => (
-                            <TableRow key={item.id}> 
+                            <TableRow key={item.id}>
                                 <TableCell><img src={item.image_data} alt={item.name} height="50" /></TableCell>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell>₹{item.price}</TableCell>
                                 <TableCell>{Array.isArray(item.availability) ? item.availability.join(', ') : (item.availability || 'N/A')}</TableCell>
-                                <TableCell>{item.description || 'N/A'}</TableCell>
+                                <TableCell>{item.category ? `${item.category}${item.day_of_week ? ` (${item.day_of_week})` : ' (Everyday)'}` : '-'}</TableCell>
                                 <TableCell>
                                     <IconButton onClick={() => handleFormOpen(item)}><EditIcon /></IconButton>
                                     <IconButton onClick={() => handleDeleteClick(item.id)}><DeleteIcon /></IconButton>
@@ -206,14 +208,14 @@ const MenuManagement = () => { // Remove user prop
                 </Table>
             </TableContainer>
             {formOpen && (
-                <ItemForm 
-                    open={formOpen} 
-                    handleClose={handleFormClose} 
-                    currentItem={currentItem} 
-                    setCurrentItem={setCurrentItem} 
-                    handleSave={handleSave} 
+                <ItemForm
+                    open={formOpen}
+                    handleClose={handleFormClose}
+                    currentItem={currentItem}
+                    setCurrentItem={setCurrentItem}
+                    handleSave={handleSave}
                     formError={formError}
-                    isSaving={isSaving} 
+                    isSaving={isSaving}
                 />
             )}
             <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>

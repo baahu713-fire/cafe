@@ -29,6 +29,7 @@ const CartPage = () => {
         cart,
         updateQuantity,
         removeFromCart,
+        clearCart,
         totalPrice,
         itemCount,
         placeOrder,
@@ -66,7 +67,7 @@ const CartPage = () => {
             placeOrder(comment, selectedUser ? selectedUser.id : null);
         }
     };
-    
+
     const getPrice = (item) => {
         const price = item.proportion?.price ?? item.price;
         const numericPrice = parseFloat(price);
@@ -150,7 +151,18 @@ const CartPage = () => {
                                 sx={{ my: 2 }}
                             />
                         )}
-                        <Typography variant="h5">Subtotal ({itemCount} items): ₹{totalPrice.toFixed(2)}</Typography>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Delete />}
+                                onClick={clearCart}
+                            >
+                                Clear Cart
+                            </Button>
+                            <Typography variant="h5">Subtotal ({itemCount} items): ₹{totalPrice.toFixed(2)}</Typography>
+                        </Box>
                         <TextField
                             label="Add a comment to your order..."
                             multiline
@@ -161,10 +173,10 @@ const CartPage = () => {
                             onChange={(e) => setComment(e.target.value)}
                             sx={{ my: 2 }}
                         />
-                        <Button 
-                            variant="contained" 
-                            color="primary" 
-                            size="large" 
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            size="large"
                             onClick={handleCheckout}
                             disabled={isPlacingOrder}
                         >

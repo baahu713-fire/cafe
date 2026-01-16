@@ -14,9 +14,13 @@ import {
     Radio,
     RadioGroup,
     FormControl,
-    FormControlLabel
+    FormControlLabel,
+    List,
+    ListItem,
+    ListItemText,
+    Divider
 } from '@mui/material';
-import { Add, Remove, Favorite, FavoriteBorder } from '@mui/icons-material';
+import { Add, Remove, Favorite, FavoriteBorder, Edit } from '@mui/icons-material';
 import { useCart } from '../hooks/useCart';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -61,7 +65,52 @@ const ProportionSelectionDialog = ({ open, onClose, item, onAddToCart }) => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleConfirm}>Add to Cart</Button>
+                <Button onClick={handleConfirm} variant="contained">Add to Cart</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+const ManageCartItemDialog = ({ open, onClose, item, cartItems, updateQuantity, onAddNew }) => {
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+            <DialogTitle>Manage {item.name}</DialogTitle>
+            <DialogContent>
+                <List>
+                    {cartItems.map((cartItem) => {
+                        const proportionName = cartItem.proportion?.name || 'Standard';
+                        const price = cartItem.proportion?.price || item.price;
+                        return (
+                            <ListItem key={proportionName} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
+                                <ListItemText
+                                    primary={proportionName}
+                                    secondary={`₹${parseFloat(price).toFixed(2)}`}
+                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <IconButton onClick={() => updateQuantity(item.id, cartItem.quantity - 1, proportionName)} size="small" color="primary">
+                                        <Remove fontSize="small" />
+                                    </IconButton>
+                                    <Typography sx={{ mx: 2, fontWeight: 'bold' }}>{cartItem.quantity}</Typography>
+                                    <IconButton onClick={() => updateQuantity(item.id, cartItem.quantity + 1, proportionName)} size="small" color="primary">
+                                        <Add fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                            </ListItem>
+                        );
+                    })}
+                </List>
+                <Divider sx={{ my: 2 }} />
+                <Button
+                    startIcon={<Add />}
+                    fullWidth
+                    variant="outlined"
+                    onClick={onAddNew}
+                >
+                    Add Another Size
+                </Button>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Done</Button>
             </DialogActions>
         </Dialog>
     );
@@ -70,14 +119,16 @@ const ProportionSelectionDialog = ({ open, onClose, item, onAddToCart }) => {
 const MenuItemCard = ({ item }) => {
     const { cart, addToCart, updateQuantity } = useCart();
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
     // Correctly use the `available` boolean field.
     const isAvailable = item.available;
     const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price));
 
-    const cartItem = cart.find(i => i.id === item.id);
-    const quantity = cartItem ? cartItem.quantity : 0;
+    // Get all cart entries for this item
+    const cartItems = cart.filter(i => i.id === item.id);
+    const totalQuantity = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
     const handleToggleFavorite = () => {
         if (isFavorite(item.id)) {
@@ -86,44 +137,69 @@ const MenuItemCard = ({ item }) => {
             addFavorite(item);
         }
     };
-    
-    const handleAddToCartClick = () => {
-        if (!isPurchasable) return; // Prevent adding unavailable items
+
+    // Initial add click
+    const handleAddClick = () => {
+        if (!isPurchasable) return;
 
         const hasProportions = item.proportions && item.proportions.length > 0;
 
         if (hasProportions) {
-            setIsDialogOpen(true);
+            setIsSelectionDialogOpen(true);
         } else {
             const numericPrice = parseFloat(item.price);
-            addToCart({ 
-                ...item, 
+            addToCart({
+                ...item,
                 price: numericPrice,
-                proportion: { name: 'Standard', price: numericPrice } 
+                proportion: { name: 'Standard', price: numericPrice }
             });
         }
     };
 
+    // Confirm adding a specific proportion
     const handleConfirmProportion = (proportion) => {
         const numericPrice = parseFloat(item.price);
         const numericProportionPrice = parseFloat(proportion.price);
-        addToCart({ 
-            ...item, 
+        addToCart({
+            ...item,
             price: numericPrice,
             proportion: { ...proportion, price: numericProportionPrice }
         });
-        setIsDialogOpen(false);
+        setIsSelectionDialogOpen(false);
+        // checking if manage dialog is open, if so keep it open to show new state
+        // logic simplified: close selection, user sees updated badge
+    };
+
+    const handleIncrement = () => {
+        if (item.proportions && item.proportions.length > 0) {
+            setIsManageDialogOpen(true);
+        } else {
+            // Standard item - just increment the first (and only) entry
+            const currentQty = cartItems[0]?.quantity || 0;
+            updateQuantity(item.id, currentQty + 1, 'Standard');
+        }
+    };
+
+    const handleDecrement = () => {
+        if (item.proportions && item.proportions.length > 0) {
+            setIsManageDialogOpen(true);
+        } else {
+            // Standard item
+            const currentQty = cartItems[0]?.quantity || 0;
+            updateQuantity(item.id, currentQty - 1, 'Standard');
+        }
     };
 
     return (
-        <Card sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
+        <Card sx={{
+            display: 'flex',
+            flexDirection: 'column',
             height: '100%',
-            backgroundColor: !isAvailable ? '#f5f5f5' : '#fff', // Vintage-style background for unavailable items
+            backgroundColor: !isAvailable ? '#f5f5f5' : '#fff',
             opacity: !isAvailable ? 0.6 : 1,
             transition: 'opacity 0.3s ease-in-out',
-             width:'14vw',
+            width: '100%',
+            position: 'relative' // For badge positioning if needed
         }}>
             <Box sx={{ position: 'relative' }}>
                 <CardMedia
@@ -132,8 +208,8 @@ const MenuItemCard = ({ item }) => {
                     image={item.image_data || 'https://via.placeholder.com/150'}
                     alt={item.name}
                 />
-                <IconButton 
-                    onClick={handleToggleFavorite} 
+                <IconButton
+                    onClick={handleToggleFavorite}
                     sx={{ position: 'absolute', top: 8, right: 8, color: 'white', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                 >
                     {isFavorite(item.id) ? <Favorite color="error" /> : <FavoriteBorder />}
@@ -149,47 +225,79 @@ const MenuItemCard = ({ item }) => {
             </CardContent>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 {isPurchasable ? (
-                     <Typography variant="h6" sx={{ mb: 2 }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
                         ₹{parseFloat(item.price).toFixed(2)}
-                     </Typography>
+                    </Typography>
                 ) : (
                     <Typography variant="h6" sx={{ mb: 2, color: '#757575', fontStyle: 'italic' }}>
                         Unavailable
                     </Typography>
                 )}
 
-                {quantity > 0 ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                        <IconButton onClick={() => updateQuantity(item.id, quantity - 1)} size="small">
-                            <Remove />
+                {totalQuantity > 0 ? (
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: 2,
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: '20px',
+                        p: 0.5
+                    }}>
+                        <IconButton
+                            onClick={handleDecrement}
+                            size="small"
+                            color="primary"
+                            sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#eeeeee' } }}
+                        >
+                            <Remove fontSize="small" />
                         </IconButton>
-                        <Typography variant="h6" sx={{ mx: 2 }}>{quantity}</Typography>
-                        <IconButton onClick={() => updateQuantity(item.id, quantity + 1)} size="small">
-                            <Add />
+
+                        <Typography variant="h6" sx={{ mx: 2, minWidth: '20px', textAlign: 'center' }}>
+                            {totalQuantity}
+                        </Typography>
+
+                        <IconButton
+                            onClick={handleIncrement}
+                            size="small"
+                            color="primary"
+                            sx={{ backgroundColor: '#fff', '&:hover': { backgroundColor: '#eeeeee' } }}
+                        >
+                            <Add fontSize="small" />
                         </IconButton>
                     </Box>
                 ) : (
-                    <Button 
-                        variant="contained" 
-                        onClick={handleAddToCartClick}
-                        disabled={!isPurchasable} // Disable button if not purchasable
-                        sx={{ 
+                    <Button
+                        variant="contained"
+                        onClick={handleAddClick}
+                        disabled={!isPurchasable}
+                        fullWidth
+                        sx={{
                             backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.main',
                             '&:hover': {
                                 backgroundColor: !isPurchasable ? '#bdbdbd' : 'primary.dark',
                             },
+                            borderRadius: '20px'
                         }}
                     >
                         {isPurchasable ? 'Add to Cart' : 'Unavailable'}
                     </Button>
                 )}
             </Box>
-            
+
             <ProportionSelectionDialog
-                open={isDialogOpen}
-                onClose={() => setIsDialogOpen(false)}
+                open={isSelectionDialogOpen}
+                onClose={() => setIsSelectionDialogOpen(false)}
                 item={item}
                 onAddToCart={handleConfirmProportion}
+            />
+
+            <ManageCartItemDialog
+                open={isManageDialogOpen}
+                onClose={() => setIsManageDialogOpen(false)}
+                item={item}
+                cartItems={cartItems}
+                updateQuantity={updateQuantity}
+                onAddNew={() => setIsSelectionDialogOpen(true)}
             />
         </Card>
     );

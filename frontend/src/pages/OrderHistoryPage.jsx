@@ -122,11 +122,11 @@ const OrderHistoryPage = () => {
                     <Accordion key={order.id} sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' } }} >
                         <AccordionSummary expandIcon={<ExpandMoreIcon />} >
                             <Grid container alignItems="center" spacing={2} sx={{ flexGrow: 1 }}>
-                                <Grid item xs={12} sm={2}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
-                                <Grid item xs={12} sm={3}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
-                                <Grid item xs={6} sm={2}><Chip label={order.status} color={getStatusChipColor(order.status)} size="small" /></Grid>
-                                <Grid item xs={6} sm={2}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
-                                <Grid item xs={12} sm={3}>
+                                <Grid size={{ xs: 12, sm: 2 }}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
+                                <Grid size={{ xs: 12, sm: 3 }}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}><Chip label={order.status} color={getStatusChipColor(order.status)} size="small" /></Grid>
+                                <Grid size={{ xs: 6, sm: 2 }}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
+                                <Grid size={{ xs: 12, sm: 3 }}>
                                     {order.feedback ? (
                                         <Rating value={order.feedback.rating} readOnly />
                                     ) : (order.status === 'Delivered' || order.status === 'Settled') ? (
@@ -137,7 +137,7 @@ const OrderHistoryPage = () => {
                         </AccordionSummary>
                         <AccordionDetails sx={{ backgroundColor: 'grey.50', p: 3 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Typography variant="h6" gutterBottom>Order Items</Typography>
                                     <List disablePadding>
                                         {(order.items || []).map(item => (
@@ -156,7 +156,7 @@ const OrderHistoryPage = () => {
                                         </Box>
                                     )}
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid size={{ xs: 12, md: 6 }}>
                                     <Typography variant="h6" gutterBottom>Feedback</Typography>
                                     {order.feedback ? (
                                         <Box>

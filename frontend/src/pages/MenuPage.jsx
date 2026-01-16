@@ -12,10 +12,13 @@ import {
     ToggleButton,
 } from '@mui/material';
 import MenuItemCard from '../components/MenuItemCard';
+import UnsettledAmountNotification from '../components/UnsettledAmountNotification';
+import { useAuth } from '../contexts/AuthContext';
 
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages'];
 
 const MenuPage = () => {
+    const { user } = useAuth();
     const { menuItems, loading, error } = useMenu();
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
@@ -28,7 +31,7 @@ const MenuPage = () => {
 
     const filteredMenu = menuItems.filter(item => {
         const matchesSearchTerm = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
+            (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCategory = categoryFilter === 'All' || (item.availability && item.availability.includes(categoryFilter));
         return matchesSearchTerm && matchesCategory;
     });
@@ -41,6 +44,8 @@ const MenuPage = () => {
             <Typography variant="h2" gutterBottom align="center" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                 Our Menu
             </Typography>
+
+            <UnsettledAmountNotification amount={user?.unsettled_amount} />
 
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
                 <TextField
@@ -65,8 +70,8 @@ const MenuPage = () => {
                     }}
                 >
                     {CATEGORIES.map(category => (
-                        <ToggleButton 
-                            key={category} 
+                        <ToggleButton
+                            key={category}
                             value={category}
                             sx={{
                                 border: 'none',
@@ -95,7 +100,7 @@ const MenuPage = () => {
 
             <Grid container spacing={4}>
                 {filteredMenu.map(item => (
-                    <Grid item key={item.id} xs={12} sm={6} md={4}>
+                    <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
                         <MenuItemCard item={item} />
                     </Grid>
                 ))}

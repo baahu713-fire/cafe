@@ -7,6 +7,7 @@ const session = require('express-session');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const compression = require('compression');
 const { getRedisClient } = require('./src/config/redis');
 
 // Import routes
@@ -16,6 +17,8 @@ const menuRoutes = require('./src/routes/menuRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const captchaRoutes = require('./src/routes/captcha');
+const dailySpecialsRoutes = require('./src/routes/dailySpecialsRoutes');
+const cmcRoutes = require('./src/routes/cmcRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -23,9 +26,13 @@ app.set('trust proxy', 1);
 // Security & Logging Middleware
 app.use(helmet());
 
+// Compression middleware - compress all responses
+app.use(compression());
+
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:3000',
   'http://localhost:3000',
+  'http://localhost:5173',
   'http://localhost',
   'http://127.0.0.1'
 ];
@@ -36,8 +43,8 @@ if (process.env.DEV_ORIGIN) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 
-    || /\.cloudworkstations\.dev$/.test(origin)) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1
+      || /\.cloudworkstations\.dev$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -54,21 +61,30 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-  message: 'Too many requests from this IP, please try again after 15 minutes.',
+// Rate limiting - Different limits for authenticated vs unauthenticated users
+// Public rate limiter: Stricter for unauthenticated requests
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 min for unauthenticated users
+  message: 'Too many requests. Please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,
-  // keyGenerator: (req, res) => {
-  //   // Use the client's IP from the 'X-Forwarded-For' header, or fall back to the direct IP.
-  //   // This is crucial for environments behind a proxy (like Docker).
-  //   const forwardedIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : null;
-  //   return forwardedIp || req.ip;
-  // },
+  skip: (req) => req.session?.user, // Skip if user is authenticated
 });
-app.use('/api/', apiLimiter);
+
+// Authenticated rate limiter: More generous for logged-in users
+const authenticatedLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3000, // 3000 requests per 15 min for authenticated users
+  message: 'Rate limit exceeded. Please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.session?.user, // Skip if NOT authenticated
+});
+
+// Apply both limiters - order matters, authenticated first
+app.use('/api/', authenticatedLimiter);
+app.use('/api/', publicLimiter);
 
 const startServer = async () => {
   try {
@@ -85,13 +101,13 @@ const startServer = async () => {
     // Use a variable to hold the imported module
     let RedisStore;
     try {
-        const redisModule = await import('connect-redis');
-        RedisStore = redisModule.default;
+      const redisModule = await import('connect-redis');
+      RedisStore = redisModule.default;
     } catch (err) {
-        console.error("Failed to dynamically import connect-redis:", err);
-        throw new Error("Could not load the session store. Application cannot start.");
+      console.error("Failed to dynamically import connect-redis:", err);
+      throw new Error("Could not load the session store. Application cannot start.");
     }
-    
+
     app.use(
       session({
         store: new RedisStore({
@@ -126,6 +142,8 @@ const startServer = async () => {
     app.use('/api/orders', orderRoutes);
     app.use('/api/users', userRoutes);
     app.use('/api', captchaRoutes);
+    app.use('/api/daily-specials', dailySpecialsRoutes);
+    app.use('/api/cmc', cmcRoutes);
 
     // 404 and Error Handlers
     app.use((req, res, next) => {

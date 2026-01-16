@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const userService = require('../services/userService');
 
 const register = async (req, res) => {
   try {
@@ -41,7 +42,7 @@ const register = async (req, res) => {
       return res.status(409).json({ message: 'This username is already taken.' });
     }
     if (error.message.includes('registration key')) {
-        return res.status(403).json({ message: error.message });
+      return res.status(403).json({ message: error.message });
     }
     res.status(500).json({ message: error.message || 'An error occurred during registration. Please try again later.' });
   }
@@ -72,9 +73,12 @@ const login = async (req, res) => {
     }
 
     // 4. Set session data
+    // 4. Set session data
     req.session.user = user;
 
-    res.json({ user });
+    const unsettled_amount = await userService.getUserUnsettledAmount(user.id);
+
+    res.json({ user: { ...user, unsettled_amount } });
   } catch (error) {
     res.status(401).json({ message: error.message });
   }
@@ -93,7 +97,7 @@ const logout = async (req, res) => {
         // Even if session destruction fails, we proceed to clear the cookie
         console.error('Error destroying session:', err);
       }
-      
+
       // Clear the cookie and send the final response
       res.clearCookie('connect.sid');
       res.status(200).json({ message: 'Logged out successfully.' });
@@ -108,20 +112,21 @@ const logout = async (req, res) => {
 
 const getMe = async (req, res) => {
   if (req.session.user) {
-    res.json({ user: req.session.user });
+    const unsettled_amount = await userService.getUserUnsettledAmount(req.session.user.id);
+    res.json({ user: { ...req.session.user, unsettled_amount } });
   } else {
     res.status(401).json({ message: 'Not authenticated' });
   }
 };
 
 const forgotPassword = async (req, res) => {
-    try {
-        const { username, registrationKey, newPassword } = req.body;
-        await authService.forgotPassword({ username, registrationKey, newPassword });
-        res.status(200).json({ message: 'Password has been reset successfully.' });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
+  try {
+    const { username, registrationKey, newPassword } = req.body;
+    await authService.forgotPassword({ username, registrationKey, newPassword });
+    res.status(200).json({ message: 'Password has been reset successfully.' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
 
 module.exports = {

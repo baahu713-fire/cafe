@@ -18,7 +18,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,8 +50,8 @@ const LoginPage = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper 
-        elevation={6} 
+      <Paper
+        elevation={6}
         sx={{
           marginTop: 8,
           display: 'flex',
@@ -120,12 +120,12 @@ const LoginPage = () => {
             )}
           </Box>
           <Grid container justifyContent="space-between">
-            <Grid item>
+            <Grid>
               <Link to="/forgot-password" variant="body2">
                 Forgot password?
               </Link>
             </Grid>
-            <Grid item>
+            <Grid>
               <Link to="/register" variant="body2">
                 Don't have an account? Sign Up
               </Link>

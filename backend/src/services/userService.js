@@ -195,6 +195,16 @@ const updateUserStatus = async (userId, isActive) => {
     return updatedUser;
 };
 
+const getUserUnsettledAmount = async (userId) => {
+    const query = `
+        SELECT SUM(total_price) as unsettled_amount 
+        FROM orders 
+        WHERE user_id = $1 AND status = $2
+    `;
+    const { rows } = await db.query(query, [userId, ORDER_STATUS.DELIVERED]);
+    return parseFloat(rows[0].unsettled_amount || 0);
+};
+
 module.exports = {
     getAllUsers,
     getAllUsersForSuperAdmin,
@@ -205,5 +215,6 @@ module.exports = {
     updateUserBySuperAdmin,
     changeUserPasswordBySuperAdmin,
     getUserProfile,
-    updateUserStatus
+    updateUserStatus,
+    getUserUnsettledAmount
 };

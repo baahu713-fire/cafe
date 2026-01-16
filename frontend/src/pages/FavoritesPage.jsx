@@ -20,10 +20,10 @@ const FavoritesPage = () => {
             ) : (
                 <Grid container spacing={4}>
                     {favorites.map(item => (
-                        <Grid item key={item.id} xs={12} sm={6} md={4}>
+                        <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
                             <Box sx={{ position: 'relative' }}>
                                 <MenuItemCard item={item} />
-                                <Button 
+                                <Button
                                     variant="contained"
                                     color="error"
                                     onClick={() => removeFavorite(item.id)}

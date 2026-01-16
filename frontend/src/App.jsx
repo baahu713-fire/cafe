@@ -22,6 +22,7 @@ import AdminPage from './pages/AdminPage.jsx';
 import MyOrdersPage from './pages/MyOrdersPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import ContactPage from './pages/ContactPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import { useAuth } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -52,6 +53,7 @@ const App = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/contact" element={<ContactPage />} />
 
             {/* Admin Protected Route */}
             <Route element={<ProtectedRoute requiredRole="admin" />}>

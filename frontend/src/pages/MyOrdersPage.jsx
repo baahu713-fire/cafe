@@ -63,7 +63,7 @@ const StatusChip = ({ status }) => {
 
 const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder, onReorder }) => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const isCancellable = 
+  const isCancellable =
     (order.status === ORDER_STATUS.PENDING || order.status === ORDER_STATUS.CONFIRMED) &&
     (new Date() - new Date(order.created_at) < 60000); // 60 seconds
 
@@ -75,20 +75,20 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder
     <Accordion sx={{ mb: 2, borderRadius: '12px', '&:before': { display: 'none' } }}>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Grid container alignItems="center" spacing={2} sx={{ flexGrow: 1 }}>
-            <Grid item xs={12} sm={2} style={{width:'10vw'}}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
-            <Grid item xs={12} sm={3} style={{width:'10vw'}}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
-            <Grid item xs={6} sm={2} style={{width:'10vw'}}>
-                <StatusChip status={order.status} />
-                {order.disputed && <Chip label="Disputed" color="error" size="small" sx={{ ml: 1, fontWeight: 'bold' }} />}
-            </Grid>
-            <Grid item xs={6} sm={2} style={{width:'10vw'}}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
-            <Grid item xs={12} sm={3} style={{width:'10vw'}}>
-                {order.feedback ? (
-                    <Rating value={order.feedback.rating} readOnly size="small" />
-                ) : canLeaveFeedback ? (
-                    <Chip label="Feedback Needed" color="info" size="small" variant="outlined" />
-                ) : null}
-            </Grid>
+          <Grid size={{ xs: 12, sm: 2 }} style={{ width: '10vw' }}><Typography sx={{ fontWeight: 'bold' }}>#{order.id}</Typography></Grid>
+          <Grid size={{ xs: 12, sm: 3 }} style={{ width: '10vw' }}><Typography variant="body2">{new Date(order.created_at).toLocaleString()}</Typography></Grid>
+          <Grid size={{ xs: 6, sm: 2 }} style={{ width: '10vw' }}>
+            <StatusChip status={order.status} />
+            {order.disputed && <Chip label="Disputed" color="error" size="small" sx={{ ml: 1, fontWeight: 'bold' }} />}
+          </Grid>
+          <Grid size={{ xs: 6, sm: 2 }} style={{ width: '10vw' }}><Typography sx={{ fontWeight: 'bold' }}>₹{parseFloat(order.total_price).toFixed(2)}</Typography></Grid>
+          <Grid size={{ xs: 12, sm: 3 }} style={{ width: '10vw' }}>
+            {order.feedback ? (
+              <Rating value={order.feedback.rating} readOnly size="small" />
+            ) : canLeaveFeedback ? (
+              <Chip label="Feedback Needed" color="info" size="small" variant="outlined" />
+            ) : null}
+          </Grid>
         </Grid>
       </AccordionSummary>
       <AccordionDetails sx={{ backgroundColor: 'grey.50', p: 3 }}>
@@ -112,28 +112,28 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder
         <Divider sx={{ my: 2 }} />
 
         {order.comment && (
-            <Box mb={2}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Your Comment:</Typography>
-                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>"{order.comment}"</Typography>
-            </Box>
+          <Box mb={2}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Your Comment:</Typography>
+            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>"{order.comment}"</Typography>
+          </Box>
         )}
 
         <Grid container justifyContent="flex-end" alignItems="center">
-            {isCancellable && (
-                <Button size="small" color="error" onClick={() => onCancelOrder(order.id)} sx={{ mr: 1 }}>
-                    Cancel Order
-                </Button>
-            )}
-            {canReorder && (
-                <Button size="small" variant="outlined" color="primary" onClick={() => onReorder(order)}>
-                    Reorder
-                </Button>
-            )}
-            {canDispute && (
-                <Button size="small" color="warning" onClick={() => onDisputeOrder(order.id)} sx={{ mr: 1 }} disabled={order.disputed}>
-                    {order.disputed ? 'Disputed' : 'Dispute'}
-                </Button>
-            )}
+          {isCancellable && (
+            <Button size="small" color="error" onClick={() => onCancelOrder(order.id)} sx={{ mr: 1 }}>
+              Cancel Order
+            </Button>
+          )}
+          {canReorder && (
+            <Button size="small" variant="outlined" color="primary" onClick={() => onReorder(order)}>
+              Reorder
+            </Button>
+          )}
+          {canDispute && (
+            <Button size="small" color="warning" onClick={() => onDisputeOrder(order.id)} sx={{ mr: 1 }} disabled={order.disputed}>
+              {order.disputed ? 'Disputed' : 'Dispute'}
+            </Button>
+          )}
         </Grid>
 
         {canLeaveFeedback && (
@@ -145,11 +145,11 @@ const OrderAccordion = ({ order, onFeedbackSubmit, onCancelOrder, onDisputeOrder
                 {order.feedback.comment && <Typography variant="body2" sx={{ mt: 1 }}>{order.feedback.comment}</Typography>}
               </Paper>
             ) : (
-                <Box textAlign="right">
-                    <Button size="small" onClick={() => setShowFeedbackForm(!showFeedbackForm)}>
-                        {showFeedbackForm ? 'Cancel' : 'Leave Feedback'}
-                    </Button>
-                </Box>
+              <Box textAlign="right">
+                <Button size="small" onClick={() => setShowFeedbackForm(!showFeedbackForm)}>
+                  {showFeedbackForm ? 'Cancel' : 'Leave Feedback'}
+                </Button>
+              </Box>
             )}
 
             <Collapse in={showFeedbackForm} timeout="auto" unmountOnExit>
@@ -204,7 +204,7 @@ const MyOrdersPage = () => { // Remove user prop
 
   useEffect(() => {
     if (user) { // Only fetch orders if there is a user
-        fetchOrders(1);
+      fetchOrders(1);
     }
   }, [fetchOrders, user]);
 
@@ -216,39 +216,39 @@ const MyOrdersPage = () => { // Remove user prop
 
   useEffect(() => {
     const interval = setInterval(() => {
-        setOrders(prevOrders => [...prevOrders]);
+      setOrders(prevOrders => [...prevOrders]);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
   const handleFeedbackSubmit = async (orderId, rating, comment) => {
     try {
-        await submitFeedback(orderId, { rating, comment });
-        fetchOrders(1);
+      await submitFeedback(orderId, { rating, comment });
+      fetchOrders(1);
     } catch (err) {
-        throw err;
+      throw err;
     }
   };
 
   const handleCancelOrder = async (orderId) => {
     if (window.confirm('Are you sure you want to cancel this order?')) {
-        try {
-            await cancelOrder(orderId);
-            fetchOrders(1);
-        } catch (err) {
-            setError(err.message || 'Failed to cancel the order.');
-        }
+      try {
+        await cancelOrder(orderId);
+        fetchOrders(1);
+      } catch (err) {
+        setError(err.message || 'Failed to cancel the order.');
+      }
     }
   };
 
   const handleDisputeOrder = async (orderId) => {
     if (window.confirm('Are you sure you want to dispute this order?')) {
-        try {
-            await disputeOrder(orderId);
-            fetchOrders(1);
-        } catch (err) {
-            setError(err.message || 'Failed to dispute the order.');
-        }
+      try {
+        await disputeOrder(orderId);
+        fetchOrders(1);
+      } catch (err) {
+        setError(err.message || 'Failed to dispute the order.');
+      }
     }
   };
 
@@ -323,75 +323,75 @@ const MyOrdersPage = () => { // Remove user prop
     const search = searchTerm.toLowerCase();
     const statusMatch = statusFilter ? order.status === statusFilter : true;
     const searchMatch = (
-        order.id.toString().includes(search) ||
-        order.status.toLowerCase().includes(search) ||
-        (order.comment && order.comment.toLowerCase().includes(search)) ||
-        new Date(order.created_at).toLocaleDateString().includes(search) ||
-        (order.feedback && order.feedback.rating.toString().includes(search)) ||
-        (order.feedback && order.feedback.comment && order.feedback.comment.toLowerCase().includes(search))
+      order.id.toString().includes(search) ||
+      order.status.toLowerCase().includes(search) ||
+      (order.comment && order.comment.toLowerCase().includes(search)) ||
+      new Date(order.created_at).toLocaleDateString().includes(search) ||
+      (order.feedback && order.feedback.rating.toString().includes(search)) ||
+      (order.feedback && order.feedback.comment && order.feedback.comment.toLowerCase().includes(search))
     );
     return statusMatch && searchMatch;
   });
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: '12px' }}>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                My Orders
-            </Typography>
-            <Grid container spacing={2}>
-                <Grid item xs={12} sm={8}>
-                    <TextField
-                        fullWidth
-                        variant="outlined"
-                        placeholder="Search by ID, Status, Comments, Date, or Rating..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon color="action" />
-                                </InputAdornment>
-                            ),
-                            sx: { borderRadius: '8px' }
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={4} style={{width:'10vw'}}>
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel>Status</InputLabel>
-                        <Select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            label="Status"
-                        >
-                            <MenuItem value=""><em>All Statuses</em></MenuItem>
-                            {Object.values(ORDER_STATUS).map(status => (
-                                <MenuItem key={status} value={status}>{status}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Grid>
-            </Grid>
-        </Paper>
+      <Paper elevation={2} sx={{ p: 3, mb: 4, borderRadius: '12px' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          My Orders
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 8 }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search by ID, Status, Comments, Date, or Rating..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                sx: { borderRadius: '8px' }
+              }}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }} style={{ width: '10vw' }}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                label="Status"
+              >
+                <MenuItem value=""><em>All Statuses</em></MenuItem>
+                {Object.values(ORDER_STATUS).map(status => (
+                  <MenuItem key={status} value={status}>{status}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {filteredOrders.length > 0 && (
-          filteredOrders.map(order => (
-            <OrderAccordion 
-              key={order.id} 
-              order={order} 
-              onFeedbackSubmit={handleFeedbackSubmit} 
-              onCancelOrder={handleCancelOrder} 
-              onDisputeOrder={handleDisputeOrder} 
-              onReorder={handleReorder} 
-            />
-          ))
+        filteredOrders.map(order => (
+          <OrderAccordion
+            key={order.id}
+            order={order}
+            onFeedbackSubmit={handleFeedbackSubmit}
+            onCancelOrder={handleCancelOrder}
+            onDisputeOrder={handleDisputeOrder}
+            onReorder={handleReorder}
+          />
+        ))
       )}
 
       {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box>
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 5 }}><CircularProgress /></Box>
       )}
 
       {!loading && orders.length === 0 && !searchTerm && !statusFilter && (
@@ -405,16 +405,16 @@ const MyOrdersPage = () => { // Remove user prop
 
       {!loading && orders.length < total && !searchTerm && !statusFilter && (
         <Box textAlign="center" sx={{ mt: 3 }}>
-            <Button variant="contained" onClick={handleLoadMore} disabled={loading}>
-                Load More Orders
-            </Button>
+          <Button variant="contained" onClick={handleLoadMore} disabled={loading}>
+            Load More Orders
+          </Button>
         </Box>
       )}
 
       {!loading && (searchTerm || statusFilter) && filteredOrders.length === 0 && (
-          <Paper sx={{ textAlign: 'center', p: 4, borderRadius: '16px' }}>
-              <Typography variant="h6">No orders match your search.</Typography>
-          </Paper>
+        <Paper sx={{ textAlign: 'center', p: 4, borderRadius: '16px' }}>
+          <Typography variant="h6">No orders match your search.</Typography>
+        </Paper>
       )}
 
     </Container>

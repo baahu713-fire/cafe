@@ -81,3 +81,18 @@ INSERT INTO menu_items (name, description, price, availability, proportions) VAL
 ('Coffee', 'Freshly brewed coffee.', 2.50, '{"breakfast", "lunch"}', '[{"name": "Small", "price": 2.50}, {"name":"Medium", "price": 3.00}, {"name":"Large", "price": 3.50}]'),
 ('Croissant', 'Buttery and flaky.', 3.00, '{"breakfast"}', '[{"name": "Small", "price": 2.50}, {"name":"Large", "price": 3.50}]'),
 ('Sandwich', 'Turkey and swiss on wheat.', 8.00, '{"lunch"}', NULL);
+
+
+-- Create daily_specials table
+CREATE TABLE IF NOT EXISTS daily_specials (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price NUMERIC(10, 2) NOT NULL,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('breakfast', 'lunch', 'snack')),
+    day_of_week VARCHAR(20), -- NULL for everyday items, or 'Monday', 'Tuesday', etc.
+    image VARCHAR(255),
+    available BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+

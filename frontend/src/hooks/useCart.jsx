@@ -71,7 +71,9 @@ const CartProvider = ({ children }) => {
                     getCartItemId(i) === cartItemId ? { ...i, quantity: i.quantity + quantity } : i
                 );
             } else {
-                return [...prevCart, { ...item, quantity, price: numericPrice }];
+                // Strip image_data to save localStorage space
+                const { image_data, ...itemWithoutImage } = item;
+                return [...prevCart, { ...itemWithoutImage, quantity, price: numericPrice }];
             }
         });
     }, []);

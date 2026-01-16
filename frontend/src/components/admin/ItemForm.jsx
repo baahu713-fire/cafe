@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  Button,
-  Box,
-  IconButton,
-  Typography,
-  FormControl,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
-  FormLabel,
-  Alert,
-  CircularProgress
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    TextField,
+    Button,
+    Box,
+    IconButton,
+    Typography,
+    FormControl,
+    FormGroup,
+    FormControlLabel,
+    Checkbox,
+    FormLabel,
+    Alert,
+    CircularProgress,
+    Select,
+    MenuItem,
+    InputLabel
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { AVAILABILITY_OPTIONS } from '../../constants/categories';
+import { AVAILABILITY_OPTIONS, DAILY_SPECIAL_CATEGORIES, DAYS_OF_WEEK } from '../../constants/categories';
 
 const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, formError, isSaving }) => {
     const [imagePreview, setImagePreview] = useState(null);
@@ -47,12 +50,12 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
         const { name, value, type, checked } = e.target;
         setCurrentItem(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
-    
+
     const handleAvailabilityChange = (e) => {
         const { name, checked } = e.target;
         setCurrentItem(prev => {
             const currentAvailability = prev.availability || [];
-            const newAvailability = checked 
+            const newAvailability = checked
                 ? [...currentAvailability, name]
                 : currentAvailability.filter(item => item !== name);
             return { ...prev, availability: newAvailability };
@@ -79,8 +82,8 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
             <DialogTitle>{currentItem?.id ? 'Edit Menu Item' : 'Add New Menu Item'}</DialogTitle>
             <DialogContent>
                 {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
-                <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} required disabled={isSaving}/>
-                <TextField margin="dense" name="price" label="Price" type="number" fullWidth variant="outlined" value={currentItem?.price || ''} onChange={handleChange} required disabled={isSaving}/>
+                <TextField autoFocus margin="dense" name="name" label="Name" type="text" fullWidth variant="outlined" value={currentItem?.name || ''} onChange={handleChange} required disabled={isSaving} />
+                <TextField margin="dense" name="price" label="Price" type="number" fullWidth variant="outlined" value={currentItem?.price || ''} onChange={handleChange} required disabled={isSaving} />
                 <Button variant="contained" component="label" fullWidth sx={{ my: 1 }} disabled={isSaving}>
                     Upload Image
                     <input type="file" hidden accept="image/*" onChange={handleImageChange} />
@@ -90,7 +93,39 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
                         <img src={imagePreview} alt="Preview" height="150" />
                     </Box>
                 )}
-                <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} disabled={isSaving}/>
+                <TextField margin="dense" name="description" label="Description" type="text" fullWidth multiline rows={4} variant="outlined" value={currentItem?.description || ''} onChange={handleChange} disabled={isSaving} />
+
+                {/* Daily Special Settings */}
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold' }}>Daily Special Settings</Typography>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <FormControl fullWidth margin="dense" disabled={isSaving}>
+                        <InputLabel>Special Category</InputLabel>
+                        <Select
+                            name="category"
+                            value={currentItem?.category || ''}
+                            onChange={handleChange}
+                            label="Special Category"
+                        >
+                            {DAILY_SPECIAL_CATEGORIES.map(cat => (
+                                <MenuItem key={cat.value} value={cat.value}>{cat.label}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth margin="dense" disabled={isSaving || !currentItem?.category}>
+                        <InputLabel>Day of Week</InputLabel>
+                        <Select
+                            name="day_of_week"
+                            value={currentItem?.day_of_week || ''}
+                            onChange={handleChange}
+                            label="Day of Week"
+                        >
+                            {DAYS_OF_WEEK.map(day => (
+                                <MenuItem key={day.value} value={day.value}>{day.label}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+
                 <FormControl component="fieldset" fullWidth margin="dense" disabled={isSaving}>
                     <FormLabel component="legend">Categories</FormLabel>
                     <FormGroup row>
@@ -103,15 +138,15 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
                         ))}
                     </FormGroup>
                 </FormControl>
-                 <FormControlLabel
-                    control={<Checkbox name="available" checked={currentItem?.available ?? false} onChange={handleChange} disabled={isSaving}/>}
+                <FormControlLabel
+                    control={<Checkbox name="available" checked={currentItem?.available ?? false} onChange={handleChange} disabled={isSaving} />}
                     label="Available for purchase"
                 />
                 <Typography sx={{ mt: 2, mb: 1 }}>Proportions (Optional)</Typography>
                 {currentItem?.proportions?.map((proportion, index) => (
                     <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                        <TextField label="Proportion Name" value={proportion.name} onChange={(e) => handleProportionChange(index, 'name', e.target.value)} required disabled={isSaving}/>
-                        <TextField label="Price" type="number" value={proportion.price} onChange={(e) => handleProportionChange(index, 'price', e.target.value)} required disabled={isSaving}/>
+                        <TextField label="Proportion Name" value={proportion.name} onChange={(e) => handleProportionChange(index, 'name', e.target.value)} required disabled={isSaving} />
+                        <TextField label="Price" type="number" value={proportion.price} onChange={(e) => handleProportionChange(index, 'price', e.target.value)} required disabled={isSaving} />
                         <IconButton onClick={() => removeProportion(index)} disabled={isSaving}><DeleteIcon /></IconButton>
                     </Box>
                 ))}
@@ -128,3 +163,4 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
 };
 
 export default ItemForm;
+

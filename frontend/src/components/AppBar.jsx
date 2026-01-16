@@ -75,6 +75,7 @@ const AppNav = () => {
     >
       <MenuItem component={RouterLink} to="/menu" onClick={handleMenuClose}>Menu</MenuItem>
       <MenuItem component={RouterLink} to="/daily-specials" onClick={handleMenuClose}>Daily Specials</MenuItem>
+      <MenuItem component={RouterLink} to="/contact" onClick={handleMenuClose}>Contact CMC</MenuItem>
       {user && !user.isAdmin && (
         <MenuItem component={RouterLink} to="/orders" onClick={handleMenuClose}>My Orders</MenuItem>
       )}
@@ -83,7 +84,7 @@ const AppNav = () => {
       )}
       <MenuItem component={RouterLink} to="/favorites" onClick={handleMenuClose}>
         <IconButton size="large" aria-label="favorites" color="inherit">
-            <FavoriteIcon />
+          <FavoriteIcon />
         </IconButton>
         <p>Favorites</p>
       </MenuItem>
@@ -97,25 +98,25 @@ const AppNav = () => {
       </MenuItem>
       {user ? (
         <MenuItem onClick={handleProfileMenuOpen}>
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="primary-search-account-menu"
-              aria-haspopup="true"
-              color="inherit"
-            >
-              {user.photo ? (
-                <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
-              ) : (
-                <AccountCircle />
-              )}
-            </IconButton>
-            <p>Profile</p>
+          <IconButton
+            size="large"
+            aria-label="account of current user"
+            aria-controls="primary-search-account-menu"
+            aria-haspopup="true"
+            color="inherit"
+          >
+            {user.photo ? (
+              <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
+            ) : (
+              <AccountCircle />
+            )}
+          </IconButton>
+          <p>Profile</p>
         </MenuItem>
       ) : (
         [
-            <MenuItem key="login" component={RouterLink} to="/login" onClick={handleMenuClose}>Login</MenuItem>,
-            <MenuItem key="register" component={RouterLink} to="/register" onClick={handleMenuClose}>Register</MenuItem>
+          <MenuItem key="login" component={RouterLink} to="/login" onClick={handleMenuClose}>Login</MenuItem>,
+          <MenuItem key="register" component={RouterLink} to="/register" onClick={handleMenuClose}>Register</MenuItem>
         ]
       )}
     </Menu>
@@ -132,17 +133,17 @@ const AppNav = () => {
 
           {isMobile ? (
             <>
-                <Box sx={{ flexGrow: 1 }} />
-                <IconButton
-                    size="large"
-                    aria-label="show more"
-                    aria-controls="primary-search-account-menu-mobile"
-                    aria-haspopup="true"
-                    onClick={handleMobileMenuOpen}
-                    color="inherit"
-                >
-                    <MenuIcon />
-                </IconButton>
+              <Box sx={{ flexGrow: 1 }} />
+              <IconButton
+                size="large"
+                aria-label="show more"
+                aria-controls="primary-search-account-menu-mobile"
+                aria-haspopup="true"
+                onClick={handleMobileMenuOpen}
+                color="inherit"
+              >
+                <MenuIcon />
+              </IconButton>
             </>
           ) : (
             <>
@@ -152,6 +153,9 @@ const AppNav = () => {
                 </Button>
                 <Button color="inherit" component={RouterLink} to="/daily-specials">
                   Daily Specials
+                </Button>
+                <Button color="inherit" component={RouterLink} to="/contact">
+                  Contact CMC
                 </Button>
                 {user && !user.isAdmin && (
                   <Button color="inherit" component={RouterLink} to="/orders">

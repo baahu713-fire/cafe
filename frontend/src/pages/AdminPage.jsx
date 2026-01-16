@@ -12,6 +12,7 @@ import MenuManagement from '../components/admin/MenuManagement';
 import OrderManagement from '../components/admin/OrderManagement';
 import SettlementUserBills from '../components/admin/SettlementUserBills';
 import ManageUsers from '../components/admin/ManageUsers';
+import CMCManagement from '../components/admin/CMCManagement';
 import { useAuth } from '../contexts/AuthContext';
 
 function TabPanel(props) {
@@ -39,7 +40,7 @@ const AdminPage = () => {
   const [value, setValue] = useState(0);
 
   // Redirect if user is not an admin or superadmin
-  if (!user || ( !(user.isAdmin || user.isSuperAdmin) )) {
+  if (!user || (!(user.isAdmin || user.isSuperAdmin))) {
     return <Navigate to="/" />;
   }
 
@@ -56,7 +57,7 @@ const AdminPage = () => {
         <Typography variant="h4" gutterBottom>Admin Dashboard</Typography>
         <Typography variant="body1" gutterBottom>Welcome, {user.username}!</Typography>
       </Paper>
-      
+
       <Box sx={{ width: '100%' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" centered>
@@ -64,6 +65,7 @@ const AdminPage = () => {
             <Tab label="Manage Items" />
             <Tab label="Settlement User Bills" />
             {isSuperAdmin && <Tab label="Manage Users" />}
+            {isSuperAdmin && <Tab label="Manage CMC" />}
           </Tabs>
         </Box>
         <TabPanel value={value} index={0}>
@@ -80,9 +82,15 @@ const AdminPage = () => {
             <ManageUsers />
           </TabPanel>
         )}
+        {isSuperAdmin && (
+          <TabPanel value={value} index={4}>
+            <CMCManagement />
+          </TabPanel>
+        )}
       </Box>
     </Container>
   );
 };
 
 export default AdminPage;
+

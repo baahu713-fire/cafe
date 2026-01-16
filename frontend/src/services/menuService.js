@@ -32,3 +32,13 @@ export const deleteMenuItem = async (itemId) => {
     await api.delete(`/menu/${itemId}`);
     return { message: 'Item deleted successfully' };
 };
+
+export const getDailySpecials = async (type) => {
+    try {
+        const params = type ? { type } : {};
+        const response = await api.get('/daily-specials', { params }); // Changed axios.get to api.get to maintain consistency with existing file structure
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};

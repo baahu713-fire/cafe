@@ -24,6 +24,32 @@ services:
       - "5000:5000"
     networks:
       - cafe_network
+    # Swarm deployment configuration
+    deploy:
+      replicas: 4  # Run 4 instances for load balancing
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+    # Health check for Swarm
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/menu"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     # This ensures the container can reach the host machine's services.
     extra_hosts:
       - "host.docker.internal:host-gateway"

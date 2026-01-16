@@ -62,8 +62,8 @@ const RegisterPage = () => {
     setError('');
 
     if (username.length < 5 || username.length > 20) {
-        setError('Username must be between 5 and 20 characters long.');
-        return;
+      setError('Username must be between 5 and 20 characters long.');
+      return;
     }
 
     if (password !== confirmPassword) {
@@ -80,7 +80,7 @@ const RegisterPage = () => {
       setError('A registration key is required.');
       return;
     }
-    
+
     if (!captchaInput) {
       setError('Please enter the CAPTCHA text.');
       return;
@@ -113,8 +113,8 @@ const RegisterPage = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper 
-        elevation={6} 
+      <Paper
+        elevation={6}
         sx={{
           marginTop: 8,
           display: 'flex',
@@ -187,37 +187,37 @@ const RegisterPage = () => {
             value={registrationKey}
             onChange={(e) => setRegistrationKey(e.target.value)}
           />
-            <FormControl fullWidth margin="normal">
-                <InputLabel id="team-select-label">Team</InputLabel>
-                <Select
-                    labelId="team-select-label"
-                    id="team-select"
-                    value={teamId}
-                    label="Team"
-                    onChange={(e) => setTeamId(e.target.value)}
-                >
-                    {teams.map((team) => (
-                        <MenuItem key={team.id} value={team.id}>
-                            {team.name}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-            <Box sx={{ my: 2, p: 2, border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center' }}>
-                <div dangerouslySetInnerHTML={{ __html: captchaSvg }} />
-                <Button onClick={fetchCaptcha} size="small" sx={{ mt: 1 }}>Refresh CAPTCHA</Button>
-            </Box>
-            <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="captcha"
-                label="Enter CAPTCHA"
-                type="text"
-                id="captcha"
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value)}
-            />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="team-select-label">Team</InputLabel>
+            <Select
+              labelId="team-select-label"
+              id="team-select"
+              value={teamId}
+              label="Team"
+              onChange={(e) => setTeamId(e.target.value)}
+            >
+              {teams.map((team) => (
+                <MenuItem key={team.id} value={team.id}>
+                  {team.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Box sx={{ my: 2, p: 2, border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center' }}>
+            <div dangerouslySetInnerHTML={{ __html: captchaSvg }} />
+            <Button onClick={fetchCaptcha} size="small" sx={{ mt: 1 }}>Refresh CAPTCHA</Button>
+          </Box>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="captcha"
+            label="Enter CAPTCHA"
+            type="text"
+            id="captcha"
+            value={captchaInput}
+            onChange={(e) => setCaptchaInput(e.target.value)}
+          />
           <Button
             variant="contained"
             component="label"
@@ -244,7 +244,7 @@ const RegisterPage = () => {
             Sign Up
           </Button>
           <Grid container justifyContent="flex-end">
-            <Grid item>
+            <Grid>
               <Link to="/login" variant="body2">
                 Already have an account? Sign In
               </Link>

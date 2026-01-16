@@ -19,7 +19,7 @@ const getMenuItemById = async (itemId) => {
 };
 
 const createMenuItem = async (itemData) => {
-    const { name, description, price, image_data, availability, proportions, available } = itemData;
+    const { name, description, price, image_data, availability, proportions, available, category, day_of_week } = itemData;
 
     const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND deleted_from IS NULL', [name]);
     if (existing.length > 0) {
@@ -27,14 +27,14 @@ const createMenuItem = async (itemData) => {
     }
 
     const { rows } = await db.query(
-        'INSERT INTO menu_items (name, description, price, image_data, availability, proportions, available) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [name, description, price, image_data, availability, JSON.stringify(proportions), available]
+        'INSERT INTO menu_items (name, description, price, image_data, availability, proportions, available, category, day_of_week) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [name, description, price, image_data, availability, JSON.stringify(proportions), available, category || null, day_of_week || null]
     );
     return rows[0];
 };
 
 const updateMenuItem = async (itemId, itemData) => {
-    const { name, description, price, image_data, availability, proportions, available } = itemData;
+    const { name, description, price, image_data, availability, proportions, available, category, day_of_week } = itemData;
 
     const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND id != $2 AND deleted_from IS NULL', [name, itemId]);
     if (existing.length > 0) {
@@ -47,7 +47,9 @@ const updateMenuItem = async (itemId, itemData) => {
         price,
         availability,
         JSON.stringify(proportions),
-        available
+        available,
+        category || null,
+        day_of_week || null
     ];
 
     let updateQuery = `
@@ -57,17 +59,19 @@ const updateMenuItem = async (itemId, itemData) => {
             price = $3, 
             availability = $4, 
             proportions = $5, 
-            available = $6
+            available = $6,
+            category = $7,
+            day_of_week = $8
     `;
 
     if (image_data) {
-        updateQuery += ', image_data = $7';
+        updateQuery += ', image_data = $9';
         queryParams.push(image_data);
         queryParams.push(itemId);
-        updateQuery += ' WHERE id = $8 RETURNING *';
+        updateQuery += ' WHERE id = $10 RETURNING *';
     } else {
         queryParams.push(itemId);
-        updateQuery += ' WHERE id = $7 RETURNING *';
+        updateQuery += ' WHERE id = $9 RETURNING *';
     }
 
     const { rows } = await db.query(updateQuery, queryParams);
