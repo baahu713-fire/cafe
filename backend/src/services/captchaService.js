@@ -1,5 +1,5 @@
-import svgCaptcha from 'svg-captcha';
-import {getRedisClient} from '../config/redis.js';
+const svgCaptcha = require('svg-captcha');
+const { getRedisClient } = require('../config/redis');
 
 /**
  * Generates a new CAPTCHA and stores its text in Redis.
@@ -56,4 +56,5 @@ async function validateCaptcha(sessionId, userInput) {
   return storedCaptcha.toLowerCase() === userInput.toLowerCase();
 }
 
-export { generateCaptcha, validateCaptcha };
+module.exports = { generateCaptcha, validateCaptcha };
+
