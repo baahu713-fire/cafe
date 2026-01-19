@@ -1,10 +1,11 @@
 const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
+const { isWithinTimeSlot, TIME_SLOTS, getTimeSlotStatus } = require('../constants/timeSlots');
 
 // A helper to format order data consistently
 const parseOrder = (order) => {
     if (!order) return null;
-    
+
     const items = order.items || [];
     const cleanedItems = items.filter(item => item !== null && item.id !== null);
 
@@ -40,6 +41,27 @@ const createOrder = async (orderData, userId) => {
         }
 
         const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
+
+        // Validate time slots for all items
+        const unavailableItems = [];
+        for (const menuItem of menuItems) {
+            const category = menuItem.category?.toLowerCase();
+            if (category && TIME_SLOTS[category]) {
+                if (!isWithinTimeSlot(category)) {
+                    const slot = TIME_SLOTS[category];
+                    unavailableItems.push({
+                        name: menuItem.name,
+                        category: category,
+                        availableTime: `${slot.displayStart} - ${slot.displayEnd}`
+                    });
+                }
+            }
+        }
+
+        if (unavailableItems.length > 0) {
+            const itemNames = unavailableItems.map(i => `${i.name} (${i.category}: ${i.availableTime})`).join(', ');
+            throw new Error(`The following items are not available for ordering at this time: ${itemNames}`);
+        }
 
         for (const item of items) {
             if (item.quantity <= 0) {
@@ -124,7 +146,7 @@ const getOrderById = async (orderId, user) => {
     `;
 
     const { rows: [order] } = await db.query(query, params);
-    
+
     if (!order) {
         throw new Error('Order not found or access denied.');
     }
@@ -235,7 +257,7 @@ const cancelOrder = async (orderId, user) => {
     }
 
     if ([ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)) {
-         throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
+        throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
     }
 
     const { rows: [updatedOrder] } = await db.query(
@@ -269,7 +291,7 @@ const addFeedbackToOrder = async (orderId, userId, rating, comment) => {
     if (rating === undefined || rating === null || rating === 0) {
         throw new Error('Rating is required.');
     }
-    
+
     const { rows: [order] } = await db.query('SELECT * FROM orders WHERE id = $1 AND user_id = $2', [orderId, userId]);
 
     if (!order) {

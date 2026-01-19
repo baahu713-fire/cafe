@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getDailySpecials } from '../services/menuService';
-import { Container, Typography, Grid, CircularProgress, Alert, Tabs, Tab, Box } from '@mui/material';
+import { Container, Typography, Grid, CircularProgress, Alert, Tabs, Tab, Box, Paper, Chip } from '@mui/material';
+import { Schedule, AccessTime } from '@mui/icons-material';
 import MenuItemCard from '../components/MenuItemCard';
+import useTimeSlots from '../hooks/useTimeSlots';
 
 const DailySpecialsPage = () => {
     const [weeklyMenu, setWeeklyMenu] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { timeSlots, isAvailable, getSlotInfo, formatCountdown, nextAvailableSlot, currentTimeIST } = useTimeSlots(30000);
 
     // Determine current day index (0=Sunday, 1=Monday... 6=Saturday)
     // We want Tabs 0-5 to correspond to Monday-Saturday
@@ -42,11 +45,52 @@ const DailySpecialsPage = () => {
     const currentDayName = days[activeTab];
     const currentMenu = weeklyMenu[currentDayName] || { breakfast: [], lunch: [], snacks: [] };
 
+    // Time slot status for display
+    const breakfastSlot = getSlotInfo('breakfast');
+    const lunchSlot = getSlotInfo('lunch');
+    const snackSlot = getSlotInfo('snack');
+
     return (
         <Container>
             <Typography variant="h4" component="h1" gutterBottom>
                 Daily Specials
             </Typography>
+
+            {/* Ordering Time Slots Banner */}
+            <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Schedule sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="subtitle1" fontWeight="bold">
+                        Ordering Times (IST: {currentTimeIST || '--:--'})
+                    </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Chip
+                        icon={<AccessTime />}
+                        label={`Breakfast: 8:00 - 9:45 AM`}
+                        color={isAvailable('breakfast') ? 'success' : 'default'}
+                        variant={isAvailable('breakfast') ? 'filled' : 'outlined'}
+                    />
+                    <Chip
+                        icon={<AccessTime />}
+                        label={`Lunch: 11:00 AM - 12:30 PM`}
+                        color={isAvailable('lunch') ? 'success' : 'default'}
+                        variant={isAvailable('lunch') ? 'filled' : 'outlined'}
+                    />
+                    <Chip
+                        icon={<AccessTime />}
+                        label={`Snack: 3:00 - 3:45 PM`}
+                        color={isAvailable('snack') ? 'success' : 'default'}
+                        variant={isAvailable('snack') ? 'filled' : 'outlined'}
+                    />
+                </Box>
+                {nextAvailableSlot && !isAvailable('breakfast') && !isAvailable('lunch') && !isAvailable('snack') && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                        Next ordering window: {nextAvailableSlot.category} ({nextAvailableSlot.displayStart})
+                        {nextAvailableSlot.isTomorrow ? ' tomorrow' : ''} - starts in {formatCountdown(nextAvailableSlot.minutesUntil)}
+                    </Typography>
+                )}
+            </Paper>
 
             {loading ? (
                 <CircularProgress />
@@ -72,12 +116,13 @@ const DailySpecialsPage = () => {
                         {/* Breakfast Section */}
                         <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
                             {currentDayName}'s Breakfast Special
+                            {breakfastSlot?.isActive && <Chip label="NOW OPEN" size="small" color="success" sx={{ ml: 1 }} />}
                         </Typography>
                         {currentMenu.breakfast?.length > 0 ? (
                             <Grid container spacing={4}>
                                 {currentMenu.breakfast.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} />
+                                        <MenuItemCard item={item} timeSlotInfo={breakfastSlot} />
                                     </Grid>
                                 ))}
                             </Grid>
@@ -89,12 +134,13 @@ const DailySpecialsPage = () => {
                         {/* Lunch Section */}
                         <Typography variant="h5" component="h2" gutterBottom sx={{ mt: 5, color: '#1976d2', fontWeight: 'bold' }}>
                             {currentDayName}'s Lunch Special
+                            {lunchSlot?.isActive && <Chip label="NOW OPEN" size="small" color="success" sx={{ ml: 1 }} />}
                         </Typography>
                         {currentMenu.lunch?.length > 0 ? (
                             <Grid container spacing={4}>
                                 {currentMenu.lunch.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} />
+                                        <MenuItemCard item={item} timeSlotInfo={lunchSlot} />
                                     </Grid>
                                 ))}
                             </Grid>
@@ -105,12 +151,13 @@ const DailySpecialsPage = () => {
                         {/* Snacks Section */}
                         <Typography variant="h5" component="h2" gutterBottom sx={{ mt: 5, color: '#388e3c', fontWeight: 'bold' }}>
                             {currentDayName}'s Snack Special
+                            {snackSlot?.isActive && <Chip label="NOW OPEN" size="small" color="success" sx={{ ml: 1 }} />}
                         </Typography>
                         {currentMenu.snack?.length > 0 ? (
                             <Grid container spacing={4}>
                                 {currentMenu.snack.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} />
+                                        <MenuItemCard item={item} timeSlotInfo={snackSlot} />
                                     </Grid>
                                 ))}
                             </Grid>
@@ -125,3 +172,4 @@ const DailySpecialsPage = () => {
 };
 
 export default DailySpecialsPage;
+

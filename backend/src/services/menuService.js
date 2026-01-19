@@ -58,7 +58,11 @@ const createMenuItem = async (itemData) => {
 const updateMenuItem = async (itemId, itemData) => {
     const { name, description, price, image_data, availability, proportions, available, category, day_of_week } = itemData;
 
-    const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND id != $2 AND deleted_from IS NULL', [name, itemId]);
+    // Cast itemId to integer for proper comparison
+    const id = parseInt(itemId, 10);
+
+    const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND id != $2 AND deleted_from IS NULL', [name, id]);
+
     if (existing.length > 0) {
         throw new Error('A menu item with this name already exists.');
     }
@@ -89,10 +93,10 @@ const updateMenuItem = async (itemId, itemData) => {
     if (image_data) {
         updateQuery += ', image_data = $9';
         queryParams.push(image_data);
-        queryParams.push(itemId);
+        queryParams.push(id);
         updateQuery += ' WHERE id = $10 RETURNING *';
     } else {
-        queryParams.push(itemId);
+        queryParams.push(id);
         updateQuery += ' WHERE id = $9 RETURNING *';
     }
 

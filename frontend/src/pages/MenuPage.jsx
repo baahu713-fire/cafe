@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useMenu from '../hooks/useMenu';
+import useTimeSlots from '../hooks/useTimeSlots';
 import {
     Container,
     Typography,
@@ -10,7 +11,10 @@ import {
     Box,
     ToggleButtonGroup,
     ToggleButton,
+    Paper,
+    Chip,
 } from '@mui/material';
+import { Schedule, AccessTime } from '@mui/icons-material';
 import MenuItemCard from '../components/MenuItemCard';
 import UnsettledAmountNotification from '../components/UnsettledAmountNotification';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +24,7 @@ const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages'
 const MenuPage = () => {
     const { user } = useAuth();
     const { menuItems, loading, error } = useMenu();
+    const { isAvailable, getSlotInfo, formatCountdown, nextAvailableSlot, currentTimeIST } = useTimeSlots(30000);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
 
@@ -36,6 +41,21 @@ const MenuPage = () => {
         return matchesSearchTerm && matchesCategory;
     });
 
+    /**
+     * Get time slot info for an item based on its category
+     */
+    const getTimeSlotInfoForItem = (item) => {
+        const category = item.category?.toLowerCase();
+        if (!category) return null;
+
+        // Map category to time slot
+        if (['breakfast', 'lunch', 'snack', 'snacks'].includes(category)) {
+            const slotKey = category === 'snacks' ? 'snack' : category;
+            return getSlotInfo(slotKey);
+        }
+        return null;
+    };
+
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
     if (error) return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
 
@@ -46,6 +66,45 @@ const MenuPage = () => {
             </Typography>
 
             <UnsettledAmountNotification amount={user?.unsettled_amount} />
+
+            {/* Ordering Time Slots Banner */}
+            <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Schedule sx={{ mr: 1, color: 'primary.main' }} />
+                    <Typography variant="subtitle1" fontWeight="bold">
+                        Ordering Times (IST: {currentTimeIST || '--:--'})
+                    </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Chip
+                        icon={<AccessTime />}
+                        label="Breakfast: 8:00 - 9:45 AM"
+                        color={isAvailable('breakfast') ? 'success' : 'default'}
+                        variant={isAvailable('breakfast') ? 'filled' : 'outlined'}
+                        size="small"
+                    />
+                    <Chip
+                        icon={<AccessTime />}
+                        label="Lunch: 11:00 AM - 12:30 PM"
+                        color={isAvailable('lunch') ? 'success' : 'default'}
+                        variant={isAvailable('lunch') ? 'filled' : 'outlined'}
+                        size="small"
+                    />
+                    <Chip
+                        icon={<AccessTime />}
+                        label="Snack: 3:00 - 3:45 PM"
+                        color={isAvailable('snack') ? 'success' : 'default'}
+                        variant={isAvailable('snack') ? 'filled' : 'outlined'}
+                        size="small"
+                    />
+                </Box>
+                {nextAvailableSlot && !isAvailable('breakfast') && !isAvailable('lunch') && !isAvailable('snack') && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                        Next window: {nextAvailableSlot.category} ({nextAvailableSlot.displayStart})
+                        {nextAvailableSlot.isTomorrow ? ' tomorrow' : ''} - in {formatCountdown(nextAvailableSlot.minutesUntil)}
+                    </Typography>
+                )}
+            </Paper>
 
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
                 <TextField
@@ -101,7 +160,7 @@ const MenuPage = () => {
             <Grid container spacing={4}>
                 {filteredMenu.map(item => (
                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                        <MenuItemCard item={item} />
+                        <MenuItemCard item={item} timeSlotInfo={getTimeSlotInfoForItem(item)} />
                     </Grid>
                 ))}
             </Grid>
@@ -110,3 +169,4 @@ const MenuPage = () => {
 }
 
 export default MenuPage;
+

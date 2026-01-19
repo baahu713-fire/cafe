@@ -20,6 +20,7 @@ const userRoutes = require('./src/routes/userRoutes');
 const captchaRoutes = require('./src/routes/captcha');
 const dailySpecialsRoutes = require('./src/routes/dailySpecialsRoutes');
 const cmcRoutes = require('./src/routes/cmcRoutes');
+const timeSlotRoutes = require('./src/routes/timeSlotRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -145,6 +146,7 @@ const startServer = async () => {
     app.use('/api', captchaRoutes);
     app.use('/api/daily-specials', dailySpecialsRoutes);
     app.use('/api/cmc', cmcRoutes);
+    app.use('/api/time-slots', timeSlotRoutes);
 
     // 404 and Error Handlers
     app.use((req, res, next) => {

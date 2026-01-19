@@ -18,9 +18,10 @@ import {
     List,
     ListItem,
     ListItemText,
-    Divider
+    Divider,
+    Chip
 } from '@mui/material';
-import { Add, Remove, Favorite, FavoriteBorder, Edit } from '@mui/icons-material';
+import { Add, Remove, Favorite, FavoriteBorder, Schedule } from '@mui/icons-material';
 import { useCart } from '../hooks/useCart';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -116,15 +117,20 @@ const ManageCartItemDialog = ({ open, onClose, item, cartItems, updateQuantity, 
     );
 };
 
-const MenuItemCard = ({ item }) => {
+const MenuItemCard = ({ item, timeSlotInfo }) => {
     const { cart, addToCart, updateQuantity } = useCart();
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
     const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
+    // Check time slot availability for this item's category
+    const category = item.category?.toLowerCase();
+    const hasTimeRestriction = category && ['breakfast', 'lunch', 'snack', 'snacks'].includes(category);
+    const isWithinTimeSlot = timeSlotInfo?.isActive ?? true;
+
     // Correctly use the `available` boolean field.
     const isAvailable = item.available;
-    const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price));
+    const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price)) && (!hasTimeRestriction || isWithinTimeSlot);
 
     // Get all cart entries for this item
     const cartItems = cart.filter(i => i.id === item.id);
@@ -219,13 +225,28 @@ const MenuItemCard = ({ item }) => {
                 <Typography gutterBottom variant="h5" component="div">
                     {item.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
                     {item.description}
                 </Typography>
             </CardContent>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                {/* Time slot restriction chip */}
+                {hasTimeRestriction && !isWithinTimeSlot && timeSlotInfo && (
+                    <Chip
+                        icon={<Schedule />}
+                        label={`Available: ${timeSlotInfo.displayStart} - ${timeSlotInfo.displayEnd}`}
+                        size="small"
+                        color="warning"
+                        sx={{ mb: 1, fontSize: '0.75rem' }}
+                    />
+                )}
+
                 {isPurchasable ? (
                     <Typography variant="h6" sx={{ mb: 2 }}>
+                        ₹{parseFloat(item.price).toFixed(2)}
+                    </Typography>
+                ) : hasTimeRestriction && !isWithinTimeSlot ? (
+                    <Typography variant="h6" sx={{ mb: 2, color: '#ff9800', fontStyle: 'italic' }}>
                         ₹{parseFloat(item.price).toFixed(2)}
                     </Typography>
                 ) : (
