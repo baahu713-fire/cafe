@@ -32,8 +32,8 @@ const registerUser = async (userData) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userResult = await client.query(
-      'INSERT INTO users (name, username, hashed_password, role, team_id, photo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, username, role, team_id, is_active',
-      [name, username, hashedPassword, role, team_id, photoBuffer]
+      'INSERT INTO users (name, username, hashed_password, team_id, photo) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, team_id, is_active',
+      [name, username, hashedPassword, team_id, photoBuffer]
     );
 
     const user = userResult.rows[0];
@@ -140,41 +140,41 @@ const endUserSession = async (sessionId) => {
 
 
 const forgotPassword = async ({ username, registrationKey, newPassword }) => {
-    const client = await db.pool.connect();
-    try {
-        await client.query('BEGIN');
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
 
-        const userResult = await client.query('SELECT id FROM users WHERE username = $1', [username]);
-        if (userResult.rows.length === 0) {
-            throw new Error('User not found.');
-        }
-        const userId = userResult.rows[0].id;
-
-        const keyResult = await client.query(
-            'SELECT id, used_by_user_id FROM registration_keys WHERE registration_key = $1',
-            [registrationKey]
-        );
-
-        if (keyResult.rows.length === 0) {
-            throw new Error('Invalid registration key.');
-        }
-
-        const keyData = keyResult.rows[0];
-        if (keyData.used_by_user_id !== userId) {
-            throw new Error('This registration key is not associated with this user.');
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        await client.query('UPDATE users SET hashed_password = $1 WHERE id = $2', [hashedPassword, userId]);
-
-        await client.query('COMMIT');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
+    const userResult = await client.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (userResult.rows.length === 0) {
+      throw new Error('User not found.');
     }
+    const userId = userResult.rows[0].id;
+
+    const keyResult = await client.query(
+      'SELECT id, used_by_user_id FROM registration_keys WHERE registration_key = $1',
+      [registrationKey]
+    );
+
+    if (keyResult.rows.length === 0) {
+      throw new Error('Invalid registration key.');
+    }
+
+    const keyData = keyResult.rows[0];
+    if (keyData.used_by_user_id !== userId) {
+      throw new Error('This registration key is not associated with this user.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await client.query('UPDATE users SET hashed_password = $1 WHERE id = $2', [hashedPassword, userId]);
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 module.exports = {
