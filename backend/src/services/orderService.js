@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
-const { isWithinTimeSlot, TIME_SLOTS, getTimeSlotStatus } = require('../constants/timeSlots');
+const { isWithinTimeSlot, TIME_SLOTS, getCurrentTimeIST } = require('../constants/timeSlots');
+const { DAYS_OF_WEEK } = require('../constants/dailySpecials');
 
 // A helper to format order data consistently
 const parseOrder = (order) => {
@@ -42,25 +43,40 @@ const createOrder = async (orderData, userId) => {
 
         const menuItemMap = new Map(menuItems.map(item => [item.id, item]));
 
-        // Validate time slots for all items
+        // Get current day name for day_of_week validation
+        const currentTimeIST = getCurrentTimeIST();
+        const currentDayName = DAYS_OF_WEEK[currentTimeIST.getDay()];
+
+        // Validate time slots AND day_of_week for all items
         const unavailableItems = [];
         for (const menuItem of menuItems) {
             const category = menuItem.category?.toLowerCase();
+            const itemDayOfWeek = menuItem.day_of_week;
+
+            // Check time slot restriction
             if (category && TIME_SLOTS[category]) {
                 if (!isWithinTimeSlot(category)) {
                     const slot = TIME_SLOTS[category];
                     unavailableItems.push({
                         name: menuItem.name,
-                        category: category,
-                        availableTime: `${slot.displayStart} - ${slot.displayEnd}`
+                        reason: `${category} time slot (${slot.displayStart} - ${slot.displayEnd})`
                     });
+                    continue; // Skip day check if time is already wrong
                 }
+            }
+
+            // Check day_of_week restriction (if item has a specific day assigned)
+            if (itemDayOfWeek && itemDayOfWeek !== currentDayName) {
+                unavailableItems.push({
+                    name: menuItem.name,
+                    reason: `only available on ${itemDayOfWeek} (today is ${currentDayName})`
+                });
             }
         }
 
         if (unavailableItems.length > 0) {
-            const itemNames = unavailableItems.map(i => `${i.name} (${i.category}: ${i.availableTime})`).join(', ');
-            throw new Error(`The following items are not available for ordering at this time: ${itemNames}`);
+            const itemNames = unavailableItems.map(i => `${i.name} - ${i.reason}`).join(', ');
+            throw new Error(`The following items are not available for ordering: ${itemNames}`);
         }
 
         for (const item of items) {

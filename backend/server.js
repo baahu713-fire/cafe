@@ -21,6 +21,8 @@ const captchaRoutes = require('./src/routes/captcha');
 const dailySpecialsRoutes = require('./src/routes/dailySpecialsRoutes');
 const cmcRoutes = require('./src/routes/cmcRoutes');
 const timeSlotRoutes = require('./src/routes/timeSlotRoutes');
+const billRoutes = require('./src/routes/billRoutes');
+const scheduledOrderRoutes = require('./src/routes/scheduledOrderRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -65,28 +67,49 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rate limiting - Different limits for authenticated vs unauthenticated users
 // Public rate limiter: Stricter for unauthenticated requests
-const publicLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per 15 min for unauthenticated users
-  message: 'Too many requests. Please try again after 15 minutes.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.session?.user, // Skip if user is authenticated
-});
+// const publicLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100, // 100 requests per 15 min for unauthenticated users
+//   message: 'Too many requests. Please try again after 15 minutes.',
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   skip: (req) => req.session?.user, // Skip if user is authenticated
+// });
 
 // Authenticated rate limiter: More generous for logged-in users
-const authenticatedLimiter = rateLimit({
+// const authenticatedLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 3000, // 3000 requests per 15 min for authenticated users
+//   message: 'Rate limit exceeded. Please slow down.',
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   skip: (req) => !req.session?.user, // Skip if NOT authenticated
+// });
+
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3000, // 3000 requests per 15 min for authenticated users
-  message: 'Rate limit exceeded. Please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => !req.session?.user, // Skip if NOT authenticated
+  // Dynamic limit based on session status
+  max: (req) => {
+    if (req.session?.user) return 3000; // Authenticated limit
+    return 100; // Public limit
+  },
+  // Dynamic message based on session status
+  message: (req) => {
+    if (req.session?.user) return 'Rate limit exceeded. Please slow down.';
+    return 'Too many requests. Please try again after 15 minutes.';
+  },
+  // Optional: Use User ID for key if logged in, otherwise IP
+  // keyGenerator: (req) => {
+  //   return req.session?.user?.id || req.ip;
+  // }
 });
 
+
 // Apply both limiters - order matters, authenticated first
-app.use('/api/', authenticatedLimiter);
-app.use('/api/', publicLimiter);
+// app.use('/api/', authenticatedLimiter);
+// app.use('/api/', publicLimiter);
 
 const startServer = async () => {
   try {
@@ -128,6 +151,7 @@ const startServer = async () => {
       })
     );
 
+    app.use('/api/', apiLimiter);
     // ==================================================================
     //   app.get('/api/check-ip', (req, res) => {
     //     res.json({
@@ -147,6 +171,8 @@ const startServer = async () => {
     app.use('/api/daily-specials', dailySpecialsRoutes);
     app.use('/api/cmc', cmcRoutes);
     app.use('/api/time-slots', timeSlotRoutes);
+    app.use('/api/bills', billRoutes);
+    app.use('/api/scheduled-orders', scheduledOrderRoutes);
 
     // 404 and Error Handlers
     app.use((req, res, next) => {

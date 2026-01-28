@@ -142,6 +142,10 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
                     control={<Checkbox name="available" checked={currentItem?.available ?? false} onChange={handleChange} disabled={isSaving} />}
                     label="Available for purchase"
                 />
+                <FormControlLabel
+                    control={<Checkbox name="schedulable" checked={currentItem?.schedulable ?? false} onChange={handleChange} disabled={isSaving} />}
+                    label="Allow scheduling (advance booking)"
+                />
                 <Typography sx={{ mt: 2, mb: 1 }}>Proportions (Optional)</Typography>
                 {currentItem?.proportions?.map((proportion, index) => (
                     <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>

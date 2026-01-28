@@ -117,7 +117,7 @@ const ManageCartItemDialog = ({ open, onClose, item, cartItems, updateQuantity, 
     );
 };
 
-const MenuItemCard = ({ item, timeSlotInfo }) => {
+const MenuItemCard = ({ item, timeSlotInfo, currentDay }) => {
     const { cart, addToCart, updateQuantity } = useCart();
     const { addFavorite, removeFavorite, isFavorite } = useFavorites();
     const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
@@ -128,9 +128,13 @@ const MenuItemCard = ({ item, timeSlotInfo }) => {
     const hasTimeRestriction = category && ['breakfast', 'lunch', 'snack', 'snacks'].includes(category);
     const isWithinTimeSlot = timeSlotInfo?.isActive ?? true;
 
+    // Check day-of-week restriction (if item has day_of_week assigned)
+    const itemDayOfWeek = item.day_of_week;
+    const isCorrectDay = !itemDayOfWeek || itemDayOfWeek === currentDay;
+
     // Correctly use the `available` boolean field.
     const isAvailable = item.available;
-    const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price)) && (!hasTimeRestriction || isWithinTimeSlot);
+    const isPurchasable = isAvailable && item.price != null && !isNaN(parseFloat(item.price)) && (!hasTimeRestriction || isWithinTimeSlot) && isCorrectDay;
 
     // Get all cart entries for this item
     const cartItems = cart.filter(i => i.id === item.id);

@@ -69,6 +69,10 @@ const createItem = async (req, res) => {
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
     }
+    // Parse schedulable boolean from FormData string
+    if (typeof itemData.schedulable === 'string') {
+      itemData.schedulable = itemData.schedulable === 'true';
+    }
 
     // Backend validation for price and proportions
     if (itemData.proportions && itemData.proportions.length > 0) {
@@ -93,6 +97,10 @@ const updateItem = async (req, res) => {
     }
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
+    }
+    // Parse schedulable boolean from FormData string
+    if (typeof itemData.schedulable === 'string') {
+      itemData.schedulable = itemData.schedulable === 'true';
     }
 
     // Backend validation for price and proportions

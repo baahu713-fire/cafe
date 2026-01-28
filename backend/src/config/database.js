@@ -31,6 +31,12 @@ if (fs.existsSync('/run/secrets/db_user')) {
 
   pool = new Pool({
     connectionString: connectionString,
+    // Connection pool settings to prevent timeout issues
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
   });
 
 } else {
@@ -39,15 +45,28 @@ if (fs.existsSync('/run/secrets/db_user')) {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL environment variable is not set for development mode.');
   }
+
+  // Check if connecting to localhost (Docker) or remote (Supabase)
+  const isLocalhost = process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
+
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    // The SSL requirement might only be for remote connections like Supabase.
-    // If your local dev setup uses a local Postgres, you might remove this.
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    // Only use SSL for remote connections (not localhost/Docker)
+    ...(isLocalhost ? {} : { ssl: { rejectUnauthorized: false } }),
+    // Connection pool settings to prevent timeout issues
+    max: 10, // Maximum number of connections in the pool
+    idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+    connectionTimeoutMillis: 10000, // Timeout after 10 seconds when acquiring connection
+    keepAlive: true, // Keep connections alive
+    keepAliveInitialDelayMillis: 10000, // Start keep-alive after 10 seconds
   });
+
+  console.log(`Database connection: ${isLocalhost ? 'Local Docker (no SSL)' : 'Remote (SSL enabled)'}`);
 }
+
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle client', err);
+});
 
 module.exports = {
   query: (text, params) => pool.query(text, params),

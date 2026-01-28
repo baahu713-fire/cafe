@@ -18,6 +18,7 @@ import { Schedule, AccessTime } from '@mui/icons-material';
 import MenuItemCard from '../components/MenuItemCard';
 import UnsettledAmountNotification from '../components/UnsettledAmountNotification';
 import { useAuth } from '../contexts/AuthContext';
+import { getCurrentDayName } from '../constants/dailySpecials';
 
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages'];
 
@@ -27,6 +28,9 @@ const MenuPage = () => {
     const { isAvailable, getSlotInfo, formatCountdown, nextAvailableSlot, currentTimeIST } = useTimeSlots(30000);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
+
+    // Get actual today's name for ordering validation
+    const actualToday = getCurrentDayName();
 
     const handleCategoryChange = (event, newCategory) => {
         if (newCategory !== null) {
@@ -160,7 +164,7 @@ const MenuPage = () => {
             <Grid container spacing={4}>
                 {filteredMenu.map(item => (
                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                        <MenuItemCard item={item} timeSlotInfo={getTimeSlotInfoForItem(item)} />
+                        <MenuItemCard item={item} timeSlotInfo={getTimeSlotInfoForItem(item)} currentDay={actualToday} />
                     </Grid>
                 ))}
             </Grid>

@@ -19,7 +19,8 @@ import {
     TextField,
     IconButton,
     Typography,
-    DialogContentText
+    DialogContentText,
+    Chip
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -65,9 +66,9 @@ const MenuManagement = () => { // Remove user prop
                 availability = item.availability.split(',').map(s => s.trim());
             }
 
-            setCurrentItem({ ...item, proportions, availability, image: null, category: item.category || '', day_of_week: item.day_of_week || '' });
+            setCurrentItem({ ...item, proportions, availability, image: null, category: item.category || '', day_of_week: item.day_of_week || '', schedulable: item.schedulable || false });
         } else {
-            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true, category: '', day_of_week: '' });
+            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true, category: '', day_of_week: '', schedulable: false });
         }
         setFormOpen(true);
     };
@@ -123,6 +124,7 @@ const MenuManagement = () => { // Remove user prop
             }
             formData.append('category', currentItem.category || '');
             formData.append('day_of_week', currentItem.day_of_week || '');
+            formData.append('schedulable', currentItem.schedulable || false);
 
 
             if (currentItem.id) {
@@ -189,7 +191,7 @@ const MenuManagement = () => { // Remove user prop
             />
             <TableContainer component={Paper} sx={{ borderRadius: '16px' }}>
                 <Table>
-                    <TableHead><TableRow><TableCell>Image</TableCell><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Daily Special</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
+                    <TableHead><TableRow><TableCell>Image</TableCell><TableCell>Name</TableCell><TableCell>Price</TableCell><TableCell>Categories</TableCell><TableCell>Daily Special</TableCell><TableCell>Schedulable</TableCell><TableCell>Actions</TableCell></TableRow></TableHead>
                     <TableBody>
                         {filteredMenu.map(item => (
                             <TableRow key={item.id}>
@@ -198,6 +200,13 @@ const MenuManagement = () => { // Remove user prop
                                 <TableCell>₹{item.price}</TableCell>
                                 <TableCell>{Array.isArray(item.availability) ? item.availability.join(', ') : (item.availability || 'N/A')}</TableCell>
                                 <TableCell>{item.category ? `${item.category}${item.day_of_week ? ` (${item.day_of_week})` : ' (Everyday)'}` : '-'}</TableCell>
+                                <TableCell>
+                                    {item.schedulable ? (
+                                        <Chip label="Yes" color="success" size="small" />
+                                    ) : (
+                                        <Chip label="No" variant="outlined" size="small" />
+                                    )}
+                                </TableCell>
                                 <TableCell>
                                     <IconButton onClick={() => handleFormOpen(item)}><EditIcon /></IconButton>
                                     <IconButton onClick={() => handleDeleteClick(item.id)}><DeleteIcon /></IconButton>

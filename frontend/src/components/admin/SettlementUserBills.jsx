@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getAllUsers } from '../../services/userService';
 import { settleAllUserOrders } from '../../services/orderService';
 import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
-  Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent, 
-  DialogContentText, DialogTitle, TablePagination, TextField, Avatar
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  Button, Typography, Box, CircularProgress, Dialog, DialogActions, DialogContent,
+  DialogContentText, DialogTitle, TablePagination, TextField
 } from '@mui/material';
 import { debounce } from 'lodash';
+import HoverAvatar from '../HoverAvatar';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -116,7 +117,13 @@ const UserManagement = () => {
               <TableRow hover key={user.id}>
                 <TableCell component="th" scope="row">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={`/api/users/${user.id}/photo`} alt={user.name || user.username} sx={{ width: 32, height: 32, mr: 2 }} />
+                    <HoverAvatar
+                      src={`/api/users/${user.id}/photo`}
+                      alt={user.name || user.username}
+                      name={user.name || user.username}
+                      size={32}
+                      sx={{ mr: 2 }}
+                    />
                     {user.username}
                   </Box>
                 </TableCell>

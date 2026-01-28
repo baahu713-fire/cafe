@@ -4,6 +4,7 @@ import { Container, Typography, Grid, CircularProgress, Alert, Tabs, Tab, Box, P
 import { Schedule, AccessTime } from '@mui/icons-material';
 import MenuItemCard from '../components/MenuItemCard';
 import useTimeSlots from '../hooks/useTimeSlots';
+import { DAYS_OF_WEEK, WORKING_DAYS, getCurrentDayName } from '../constants/dailySpecials';
 
 const DailySpecialsPage = () => {
     const [weeklyMenu, setWeeklyMenu] = useState({});
@@ -11,15 +12,14 @@ const DailySpecialsPage = () => {
     const [error, setError] = useState('');
     const { timeSlots, isAvailable, getSlotInfo, formatCountdown, nextAvailableSlot, currentTimeIST } = useTimeSlots(30000);
 
-    // Determine current day index (0=Sunday, 1=Monday... 6=Saturday)
-    // We want Tabs 0-5 to correspond to Monday-Saturday
+    // Get actual today's name for ordering validation
     const todayIndex = new Date().getDay();
-    // If Sunday (0), default to Monday (0). If (1-6), subtract 1 to get 0-5 index.
+    const actualToday = getCurrentDayName();
+
+    // Default tab to today if it's a working day, else Monday
     const initialTab = todayIndex === 0 ? 0 : todayIndex - 1;
 
     const [activeTab, setActiveTab] = useState(initialTab);
-
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     useEffect(() => {
         const fetchDailyItems = async () => {
@@ -42,7 +42,7 @@ const DailySpecialsPage = () => {
         setActiveTab(newValue);
     };
 
-    const currentDayName = days[activeTab];
+    const currentDayName = WORKING_DAYS[activeTab];
     const currentMenu = weeklyMenu[currentDayName] || { breakfast: [], lunch: [], snacks: [] };
 
     // Time slot status for display
@@ -106,7 +106,7 @@ const DailySpecialsPage = () => {
                             scrollButtons="auto"
                             aria-label="daily specials tabs"
                         >
-                            {days.map((day, index) => (
+                            {WORKING_DAYS.map((day, index) => (
                                 <Tab key={day} label={day} />
                             ))}
                         </Tabs>
@@ -122,7 +122,7 @@ const DailySpecialsPage = () => {
                             <Grid container spacing={4}>
                                 {currentMenu.breakfast.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} timeSlotInfo={breakfastSlot} />
+                                        <MenuItemCard item={item} timeSlotInfo={breakfastSlot} currentDay={actualToday} />
                                     </Grid>
                                 ))}
                             </Grid>
@@ -140,7 +140,7 @@ const DailySpecialsPage = () => {
                             <Grid container spacing={4}>
                                 {currentMenu.lunch.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} timeSlotInfo={lunchSlot} />
+                                        <MenuItemCard item={item} timeSlotInfo={lunchSlot} currentDay={actualToday} />
                                     </Grid>
                                 ))}
                             </Grid>
@@ -157,7 +157,7 @@ const DailySpecialsPage = () => {
                             <Grid container spacing={4}>
                                 {currentMenu.snack.map((item) => (
                                     <Grid key={item.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                                        <MenuItemCard item={item} timeSlotInfo={snackSlot} />
+                                        <MenuItemCard item={item} timeSlotInfo={snackSlot} currentDay={actualToday} />
                                     </Grid>
                                 ))}
                             </Grid>

@@ -3,54 +3,55 @@ import { getAllOrders, updateOrderStatus, cancelOrder } from '../../services/ord
 import { ORDER_STATUS } from '../../constants/orderStatus';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions, 
-  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip, Avatar
+  Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip
 } from '@mui/material';
+import HoverAvatar from '../HoverAvatar';
 
 const OrderDetailsDialog = ({ order, open, onClose }) => {
-    if (!order) return null;
+  if (!order) return null;
 
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>Order #{order.id} Details</DialogTitle>
-            <DialogContent dividers>
-                <Typography variant="h6">Items</Typography>
-                <TableContainer component={Paper} sx={{ my: 2 }} >
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Item</TableCell>
-                                <TableCell align="right">Quantity</TableCell>
-                                <TableCell align="right">Price at Order</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {order.items.map((item, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{item.name_at_order}</TableCell>
-                                    <TableCell align="right">{item.quantity}</TableCell>
-                                    <TableCell align="right">₹{parseFloat(item.price_at_order).toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                {order.comment && (
-                    <Box mt={2}>
-                        <Typography variant="h6">Comment</Typography>
-                        <Paper elevation={1} sx={{ p: 2, mt: 1, backgroundColor: '#f9f9f9' }}>
-                            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-                                {order.comment}
-                            </Typography>
-                        </Paper>
-                    </Box>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Close</Button>
-            </DialogActions>
-        </Dialog>
-    );
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>Order #{order.id} Details</DialogTitle>
+      <DialogContent dividers>
+        <Typography variant="h6">Items</Typography>
+        <TableContainer component={Paper} sx={{ my: 2 }} >
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Item</TableCell>
+                <TableCell align="right">Quantity</TableCell>
+                <TableCell align="right">Price at Order</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {order.items.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.name_at_order}</TableCell>
+                  <TableCell align="right">{item.quantity}</TableCell>
+                  <TableCell align="right">₹{parseFloat(item.price_at_order).toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {order.comment && (
+          <Box mt={2}>
+            <Typography variant="h6">Comment</Typography>
+            <Paper elevation={1} sx={{ p: 2, mt: 1, backgroundColor: '#f9f9f9' }}>
+              <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
+                {order.comment}
+              </Typography>
+            </Paper>
+          </Box>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
 };
 
 const OrderManagement = () => {
@@ -97,7 +98,7 @@ const OrderManagement = () => {
       alert('Failed to update order status.');
     }
   };
-  
+
   const handleOpenSettleDialog = (orderId) => {
     setSelectedOrderId(orderId);
     setOpenSettleDialog(true);
@@ -237,7 +238,13 @@ const OrderManagement = () => {
                 <TableCell component="th" scope="row">#{order.id}</TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar src={`/api/users/${order.user_id}/photo`} alt={order.user_name} sx={{ width: 32, height: 32, mr: 2 }} />
+                    <HoverAvatar
+                      src={`/api/users/${order.user_id}/photo`}
+                      alt={order.user_name}
+                      name={order.user_name}
+                      size={32}
+                      sx={{ mr: 2 }}
+                    />
                     <div>
                       <Typography variant="body2">{order.user_name}</Typography>
                       <Typography variant="caption" color="text.secondary">{order.username}</Typography>
@@ -255,16 +262,16 @@ const OrderManagement = () => {
                     sx={{ minWidth: 120 }}
                   >
                     {Object.values(ORDER_STATUS).map(status => (
-                        <MenuItem key={status} value={status} 
-                          disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status} 
-                        >
-                            {status}
-                        </MenuItem>
+                      <MenuItem key={status} value={status}
+                        disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status}
+                      >
+                        {status}
+                      </MenuItem>
                     ))}
                   </Select>
                 </TableCell>
                 <TableCell>
-                    {order.disputed && <Chip label="Disputed" color="error" />}
+                  {order.disputed && <Chip label="Disputed" color="error" />}
                 </TableCell>
                 <TableCell align="right">
                   <Button
@@ -276,20 +283,20 @@ const OrderManagement = () => {
                     View Details
                   </Button>
                   {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED].includes(order.status) && (
-                      <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={() => handleOpenCancelDialog(order.id)}
-                      >
-                        Cancel
-                      </Button>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={() => handleOpenCancelDialog(order.id)}
+                    >
+                      Cancel
+                    </Button>
                   )}
                   <Button
                     variant="contained"
                     color="success"
                     size="small"
-                    sx={{ ml: 1}}
+                    sx={{ ml: 1 }}
                     onClick={() => handleOpenSettleDialog(order.id)}
                     disabled={order.status !== ORDER_STATUS.DELIVERED}
                   >

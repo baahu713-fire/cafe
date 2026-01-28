@@ -32,6 +32,7 @@ import {
     updateCmcMember,
     deleteCmcMember
 } from '../../services/cmcService';
+import HoverAvatar from '../HoverAvatar';
 
 const CMCManagement = () => {
     const [members, setMembers] = useState([]);
@@ -243,7 +244,12 @@ const CMCManagement = () => {
                                     <TableCell>{member.display_order}</TableCell>
                                     <TableCell>
                                         {member.photo ? (
-                                            <Avatar src={member.photo} alt={member.name} />
+                                            <HoverAvatar
+                                                src={member.photo}
+                                                alt={member.name}
+                                                name={member.name}
+                                                size={40}
+                                            />
                                         ) : (
                                             <Avatar><PersonIcon /></Avatar>
                                         )}

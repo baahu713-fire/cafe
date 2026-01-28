@@ -18,8 +18,11 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import MenuIcon from '@mui/icons-material/Menu';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../hooks/useCart';
+import HoverAvatar from './HoverAvatar';
 
 const AppNav = () => {
   const { user, logout } = useAuth();
@@ -59,6 +62,12 @@ const AppNav = () => {
       onClose={handleMenuClose}
     >
       <MenuItem component={RouterLink} to="/profile" onClick={handleMenuClose}>Profile</MenuItem>
+      <MenuItem component={RouterLink} to="/bill-summary" onClick={handleMenuClose}>
+        <ReceiptIcon sx={{ mr: 1, fontSize: 20 }} /> Bill Summary
+      </MenuItem>
+      <MenuItem component={RouterLink} to="/scheduled-orders" onClick={handleMenuClose}>
+        <ScheduleIcon sx={{ mr: 1, fontSize: 20 }} /> Scheduled Orders
+      </MenuItem>
       <MenuItem onClick={handleLogout}>Logout</MenuItem>
     </Menu>
   );
@@ -78,6 +87,16 @@ const AppNav = () => {
       <MenuItem component={RouterLink} to="/contact" onClick={handleMenuClose}>Contact CMC</MenuItem>
       {user && !user.isAdmin && (
         <MenuItem component={RouterLink} to="/orders" onClick={handleMenuClose}>My Orders</MenuItem>
+      )}
+      {user && (
+        <MenuItem component={RouterLink} to="/bill-summary" onClick={handleMenuClose}>
+          <ReceiptIcon sx={{ mr: 1, fontSize: 20 }} /> Bill Summary
+        </MenuItem>
+      )}
+      {user && (
+        <MenuItem component={RouterLink} to="/scheduled-orders" onClick={handleMenuClose}>
+          <ScheduleIcon sx={{ mr: 1, fontSize: 20 }} /> Scheduled Orders
+        </MenuItem>
       )}
       {user && user.isAdmin && (
         <MenuItem component={RouterLink} to="/admin" onClick={handleMenuClose}>Admin Dashboard</MenuItem>
@@ -106,7 +125,12 @@ const AppNav = () => {
             color="inherit"
           >
             {user.photo ? (
-              <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
+              <HoverAvatar
+                src={`/api/users/${user.id}/photo`}
+                alt={user.username}
+                name={user.name || user.username}
+                size={40}
+              />
             ) : (
               <AccountCircle />
             )}
@@ -187,7 +211,13 @@ const AppNav = () => {
                     sx={{ ml: 1 }}
                   >
                     {user.photo ? (
-                      <Avatar src={`/api/users/${user.id}/photo`} alt={user.username} />
+                      <HoverAvatar
+                        src={`/api/users/${user.id}/photo`}
+                        alt={user.username}
+                        name={user.name || user.username}
+                        size={40}
+                        enlargedSize={150}
+                      />
                     ) : (
                       <AccountCircle />
                     )}

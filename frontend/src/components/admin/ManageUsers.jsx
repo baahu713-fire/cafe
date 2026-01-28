@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-    Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, 
-    TableHead, TableRow, Switch, FormControlLabel, Box, CircularProgress, TextField, 
-    Button, Modal, Snackbar, Avatar
+import {
+    Container, Typography, Paper, Table, TableBody, TableCell, TableContainer,
+    TableHead, TableRow, Switch, FormControlLabel, Box, CircularProgress, TextField,
+    Button, Modal, Snackbar
 } from '@mui/material';
-import { 
-    getAllUsersForSuperAdmin, updateUserBySuperAdmin, changeUserPasswordBySuperAdmin 
-} from '../../services/userService'; 
+import {
+    getAllUsersForSuperAdmin, updateUserBySuperAdmin, changeUserPasswordBySuperAdmin
+} from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
+import HoverAvatar from '../HoverAvatar';
 
 const ManageUsers = () => {
     const [allUsers, setAllUsers] = useState([]);
@@ -126,7 +127,12 @@ const ManageUsers = () => {
                                 {filteredUsers.map((u) => (
                                     <TableRow key={u.id}>
                                         <TableCell>
-                                            <Avatar src={`/api/users/${u.id}/photo`} />
+                                            <HoverAvatar
+                                                src={`/api/users/${u.id}/photo`}
+                                                alt={u.name || u.username}
+                                                name={u.name || u.username}
+                                                size={40}
+                                            />
                                         </TableCell>
                                         <TableCell>{u.name}</TableCell>
                                         <TableCell>{u.username}</TableCell>

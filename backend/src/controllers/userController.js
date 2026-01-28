@@ -59,7 +59,21 @@ const getUserPhoto = async (req, res) => {
     try {
         const photo = await userService.getUserPhoto(userId);
         if (photo) {
-            res.set('Content-Type', 'image/jpeg');
+            // Generate ETag based on photo content hash
+            const crypto = require('crypto');
+            const etag = crypto.createHash('md5').update(photo).digest('hex');
+
+            // Check if client has cached version
+            if (req.headers['if-none-match'] === etag) {
+                return res.status(304).send(); // Not Modified
+            }
+
+            // Set caching headers (cache for 1 hour, revalidate after)
+            res.set({
+                'Content-Type': 'image/jpeg',
+                'Cache-Control': 'private, max-age=3600, must-revalidate',
+                'ETag': etag
+            });
             res.send(photo);
         } else {
             res.status(404).send('Photo not found.');
@@ -110,7 +124,7 @@ const changeUserPasswordBySuperAdmin = async (req, res, next) => {
         await userService.changeUserPasswordBySuperAdmin(userId, newPassword);
 
         res.status(200).json({ message: 'Password updated successfully.' });
-    } catch (error) { 
+    } catch (error) {
         next(error);
     }
 };

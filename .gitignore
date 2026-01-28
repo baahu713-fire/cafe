@@ -34,4 +34,5 @@ backend/migrations/*
 backend/load-test.yml
 backend/run_seed.js
 backend/debug_specials.js
+schema.sql
 
