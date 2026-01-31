@@ -40,10 +40,13 @@ const getMyScheduledOrders = async (req, res) => {
     try {
         const userId = req.session.user.id;
         const includeCompleted = req.query.includeCompleted === 'true';
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const { startDate, endDate } = req.query;
 
-        const orders = await scheduledOrderService.getScheduledOrdersByUserId(userId, includeCompleted);
+        const result = await scheduledOrderService.getScheduledOrdersByUserId(userId, includeCompleted, page, limit, startDate, endDate);
 
-        res.json(orders);
+        res.json(result);
     } catch (error) {
         console.error('Error fetching scheduled orders:', error);
         res.status(500).json({ message: error.message });
@@ -87,6 +90,24 @@ const cancelScheduledOrder = async (req, res) => {
 };
 
 /**
+ * POST /api/scheduled-orders/bulk-cancel
+ * Cancel multiple scheduled orders
+ */
+const cancelBulkScheduledOrders = async (req, res) => {
+    try {
+        const { orderIds } = req.body;
+        const userId = req.session.user.id;
+
+        const result = await scheduledOrderService.cancelScheduledOrdersBulk(userId, orderIds);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error bulk cancelling scheduled orders:', error);
+        res.status(400).json({ message: error.message });
+    }
+};
+
+/**
  * GET /api/scheduled-orders/schedulable-items
  * Get items that can be scheduled
  */
@@ -119,6 +140,7 @@ module.exports = {
     getMyScheduledOrders,
     getAllScheduledOrders,
     cancelScheduledOrder,
+    cancelBulkScheduledOrders,
     getSchedulableItems,
     getSchedulingConstraints
 };

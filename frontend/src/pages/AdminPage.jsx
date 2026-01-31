@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -13,6 +13,8 @@ import OrderManagement from '../components/admin/OrderManagement';
 import SettlementUserBills from '../components/admin/SettlementUserBills';
 import ManageUsers from '../components/admin/ManageUsers';
 import CMCManagement from '../components/admin/CMCManagement';
+import DailySummaryPage from './admin/DailySummaryPage';
+import AdminBillsPage from './admin/AdminBillsPage';
 import { useAuth } from '../contexts/AuthContext';
 
 function TabPanel(props) {
@@ -37,7 +39,33 @@ function TabPanel(props) {
 
 const AdminPage = () => {
   const { user } = useAuth();
-  const [value, setValue] = useState(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const tabPaths = [
+    '/admin/orders',
+    '/admin/items',
+    '/admin/daily-summary',
+    '/admin/settlement',
+    '/admin/bills',
+    '/admin/users',
+    '/admin/cmc'
+  ];
+
+  // Determine initial tab from URL
+  const getTabFromPath = (path) => {
+    // Default to /admin/orders if just /admin
+    if (path === '/admin' || path === '/admin/') return 0;
+
+    const index = tabPaths.findIndex(p => path.startsWith(p));
+    return index !== -1 ? index : 0;
+  };
+
+  const [value, setValue] = useState(getTabFromPath(location.pathname));
+
+  useEffect(() => {
+    setValue(getTabFromPath(location.pathname));
+  }, [location.pathname]);
 
   // Redirect if user is not an admin or superadmin
   if (!user || (!(user.isAdmin || user.isSuperAdmin))) {
@@ -45,7 +73,7 @@ const AdminPage = () => {
   }
 
   const handleChange = (event, newValue) => {
-    setValue(newValue);
+    navigate(tabPaths[newValue]);
   };
 
   const isAdmin = user.isAdmin;
@@ -63,7 +91,9 @@ const AdminPage = () => {
           <Tabs value={value} onChange={handleChange} aria-label="admin dashboard tabs" centered>
             <Tab label="Manage Orders" />
             <Tab label="Manage Items" />
+            <Tab label="Daily Consumption" />
             <Tab label="Settlement User Bills" />
+            <Tab label="Generate Bills" />
             {isSuperAdmin && <Tab label="Manage Users" />}
             {isSuperAdmin && <Tab label="Manage CMC" />}
           </Tabs>
@@ -75,15 +105,21 @@ const AdminPage = () => {
           <MenuManagement />
         </TabPanel>
         <TabPanel value={value} index={2}>
+          <DailySummaryPage />
+        </TabPanel>
+        <TabPanel value={value} index={3}>
           <SettlementUserBills />
         </TabPanel>
+        <TabPanel value={value} index={4}>
+          <AdminBillsPage />
+        </TabPanel>
         {isSuperAdmin && (
-          <TabPanel value={value} index={3}>
+          <TabPanel value={value} index={5}>
             <ManageUsers />
           </TabPanel>
         )}
         {isSuperAdmin && (
-          <TabPanel value={value} index={4}>
+          <TabPanel value={value} index={6}>
             <CMCManagement />
           </TabPanel>
         )}

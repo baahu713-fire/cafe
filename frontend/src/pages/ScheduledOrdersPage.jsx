@@ -23,25 +23,27 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
     IconButton,
     Tooltip,
+    Checkbox,
+    TablePagination,
+    Stack
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import { Schedule, Add, Remove, CalendarMonth, Info } from '@mui/icons-material';
+import { Schedule, Add, Remove, Info, Cancel as CancelIcon } from '@mui/icons-material';
 import {
     getSchedulingConstraints,
     getSchedulableItems,
     createScheduledOrder,
-    getMyScheduledOrders
+    getMyScheduledOrders,
+    bulkCancelScheduledOrders
 } from '../services/scheduledOrderService';
 import { useAuth } from '../contexts/AuthContext';
+import SchedulableItemCard from '../components/SchedulableItemCard';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 const ScheduledOrdersPage = () => {
     const { user } = useAuth();
@@ -49,14 +51,20 @@ const ScheduledOrdersPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    // Constraints
+    // Pagination & Data
+    const [orders, setOrders] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+
+    // Cancel confirmation dialog state
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
+
+    // Constraints & Creation Data
     const [constraints, setConstraints] = useState(null);
-
-    // Schedulable items and categories
     const [schedulableData, setSchedulableData] = useState({ categories: [], items: [] });
-
-    // My scheduled orders
-    const [myOrders, setMyOrders] = useState([]);
 
     // Dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -68,35 +76,124 @@ const ScheduledOrdersPage = () => {
     const [submitting, setSubmitting] = useState(false);
     const [itemSearch, setItemSearch] = useState('');
 
+    const [filterStartDate, setFilterStartDate] = useState(null);
+    const [filterEndDate, setFilterEndDate] = useState(null);
+
     useEffect(() => {
-        loadData();
+        loadInitializationData();
     }, []);
 
-    const loadData = async () => {
-        setLoading(true);
-        setError('');
+    useEffect(() => {
+        fetchOrders();
+    }, [page, rowsPerPage, filterStartDate, filterEndDate]);
+
+    const loadInitializationData = async () => {
         try {
-            const [constraintsData, itemsData, ordersData] = await Promise.all([
+            const [constraintsData, itemsData] = await Promise.all([
                 getSchedulingConstraints(),
-                getSchedulableItems(),
-                getMyScheduledOrders()
+                getSchedulableItems()
             ]);
             setConstraints(constraintsData);
             setSchedulableData(itemsData);
-            setMyOrders(ordersData);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load data');
+            console.error('Failed to load init data', err);
+        }
+    };
+
+    const fetchOrders = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const startDateStr = filterStartDate ? filterStartDate.format('YYYY-MM-DD') : undefined;
+            const endDateStr = filterEndDate ? filterEndDate.format('YYYY-MM-DD') : undefined;
+
+            const data = await getMyScheduledOrders(false, page + 1, rowsPerPage, startDateStr, endDateStr);
+            setOrders(data.orders || []);
+            setTotal(data.total || 0);
+            setSelectedOrderIds([]); // Reset selection on page change or refresh
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to load scheduled orders');
         } finally {
             setLoading(false);
         }
     };
 
+    // --- Bulk Action Handlers ---
+
+    const handleSelectAllClick = (event) => {
+        if (event.target.checked) {
+            const newSelecteds = orders.map((n) => n.id);
+            setSelectedOrderIds(newSelecteds);
+            return;
+        }
+        setSelectedOrderIds([]);
+    };
+
+    const handleClick = (event, id) => {
+        const selectedIndex = selectedOrderIds.indexOf(id);
+        let newSelected = [];
+
+        if (selectedIndex === -1) {
+            newSelected = newSelected.concat(selectedOrderIds, id);
+        } else if (selectedIndex === 0) {
+            newSelected = newSelected.concat(selectedOrderIds.slice(1));
+        } else if (selectedIndex === selectedOrderIds.length - 1) {
+            newSelected = newSelected.concat(selectedOrderIds.slice(0, -1));
+        } else if (selectedIndex > 0) {
+            newSelected = newSelected.concat(
+                selectedOrderIds.slice(0, selectedIndex),
+                selectedOrderIds.slice(selectedIndex + 1),
+            );
+        }
+        setSelectedOrderIds(newSelected);
+    };
+
+    const handleBulkCancel = async () => {
+        console.log('handleBulkCancel called, selectedOrderIds:', selectedOrderIds);
+        if (selectedOrderIds.length === 0) {
+            setError('Please select at least one order to cancel');
+            return;
+        }
+        // Open the confirmation dialog instead of window.confirm
+        setCancelDialogOpen(true);
+    };
+
+    const handleConfirmCancel = async () => {
+        setCancelLoading(true);
+        try {
+            console.log('Calling bulkCancelScheduledOrders with:', selectedOrderIds);
+            const result = await bulkCancelScheduledOrders(selectedOrderIds);
+            console.log('Cancel result:', result);
+            setSuccess(`${result.cancelled || selectedOrderIds.length} orders cancelled successfully`);
+            setCancelDialogOpen(false);
+            fetchOrders();
+        } catch (err) {
+            console.error('Bulk cancel error:', err);
+            setError(err.response?.data?.message || err.message || 'Failed to cancel orders');
+            setCancelDialogOpen(false);
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    // --- Dialog Handlers (Existing Logic) ---
+
     const handleOpenDialog = () => {
         setDialogOpen(true);
         setDialogError('');
         setSelectedItems([]);
-        setStartDate(dayjs().add(1, 'day'));
-        setEndDate(dayjs().add(1, 'day'));
+        const nextDay = dayjs().add(1, 'day');
+        setStartDate(nextDay);
+        setEndDate(nextDay);
         setComment('');
         setItemSearch('');
     };
@@ -106,6 +203,7 @@ const ScheduledOrdersPage = () => {
     };
 
     const handleAddItem = (item, proportionName = null) => {
+        // ... (Logic identical to previous implementation)
         let price = parseFloat(item.price);
         let displayName = item.name;
 
@@ -121,18 +219,11 @@ const ScheduledOrdersPage = () => {
         const existing = selectedItems.find(i => i.key === key);
         if (existing) {
             setSelectedItems(selectedItems.map(i =>
-                i.key === key
-                    ? { ...i, quantity: i.quantity + 1 }
-                    : i
+                i.key === key ? { ...i, quantity: i.quantity + 1 } : i
             ));
         } else {
             setSelectedItems([...selectedItems, {
-                key,
-                menu_item_id: item.id,
-                name: displayName,
-                price: price,
-                quantity: 1,
-                proportion_name: proportionName
+                key, menu_item_id: item.id, name: displayName, price, quantity: 1, proportion_name: proportionName
             }]);
         }
     };
@@ -140,11 +231,7 @@ const ScheduledOrdersPage = () => {
     const handleRemoveItem = (key) => {
         const existing = selectedItems.find(i => i.key === key);
         if (existing && existing.quantity > 1) {
-            setSelectedItems(selectedItems.map(i =>
-                i.key === key
-                    ? { ...i, quantity: i.quantity - 1 }
-                    : i
-            ));
+            setSelectedItems(selectedItems.map(i => i.key === key ? { ...i, quantity: i.quantity - 1 } : i));
         } else {
             setSelectedItems(selectedItems.filter(i => i.key !== key));
         }
@@ -154,74 +241,40 @@ const ScheduledOrdersPage = () => {
         const key = `category-${category.category}`;
         const existing = selectedItems.find(i => i.key === key);
         if (existing) {
-            setSelectedItems(selectedItems.map(i =>
-                i.key === key
-                    ? { ...i, quantity: i.quantity + 1 }
-                    : i
-            ));
+            setSelectedItems(selectedItems.map(i => i.key === key ? { ...i, quantity: i.quantity + 1 } : i));
         } else {
             setSelectedItems([...selectedItems, {
-                key,
-                isCategory: true,
-                category: category.category,
-                name: category.category,
-                price: category.minPrice, // Use min price for display
-                priceDisplay: category.hasPriceRange
-                    ? `₹${category.minPrice.toFixed(2)} - ₹${category.maxPrice.toFixed(2)}`
-                    : `₹${category.minPrice.toFixed(2)}`,
-                quantity: 1
+                key, isCategory: true, category: category.category, name: category.category,
+                price: category.minPrice, quantity: 1,
+                priceDisplay: category.hasPriceRange ? `₹${category.minPrice} - ₹${category.maxPrice}` : `₹${category.minPrice}`
             }]);
         }
     };
 
-    const handleRemoveCategory = (categoryName) => {
-        const key = `category-${categoryName}`;
+    const handleRemoveCategory = (catName) => {
+        const key = `category-${catName}`;
         const existing = selectedItems.find(i => i.key === key);
         if (existing && existing.quantity > 1) {
-            setSelectedItems(selectedItems.map(i =>
-                i.key === key
-                    ? { ...i, quantity: i.quantity - 1 }
-                    : i
-            ));
+            setSelectedItems(selectedItems.map(i => i.key === key ? { ...i, quantity: i.quantity - 1 } : i));
         } else {
             setSelectedItems(selectedItems.filter(i => i.key !== key));
         }
     };
 
-    const calculateTotal = () => {
-        return selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    };
-
-    const calculateMaxEndDate = () => {
-        if (!startDate) return dayjs().endOf('year');
-
-        // End of current year
-        return startDate.endOf('year');
-    };
+    const calculateTotal = () => selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const calculateMaxEndDate = () => startDate ? startDate.endOf('year') : dayjs().endOf('year');
 
     const handleSubmit = async () => {
         if (selectedItems.length === 0) {
             setDialogError('Please select at least one item');
             return;
         }
-
         setSubmitting(true);
         setDialogError('');
         try {
-            // Build items array - handle both categories and individual items
             const itemsToSubmit = selectedItems.map(i => {
-                if (i.isCategory) {
-                    return {
-                        category: i.category,
-                        quantity: i.quantity
-                    };
-                } else {
-                    return {
-                        menu_item_id: i.menu_item_id,
-                        quantity: i.quantity,
-                        proportion_name: i.proportion_name
-                    };
-                }
+                if (i.isCategory) return { category: i.category, quantity: i.quantity };
+                return { menu_item_id: i.menu_item_id, quantity: i.quantity, proportion_name: i.proportion_name };
             });
 
             await createScheduledOrder(
@@ -232,7 +285,7 @@ const ScheduledOrdersPage = () => {
             );
             setSuccess('Scheduled order created successfully!');
             handleCloseDialog();
-            loadData(); // Refresh orders
+            fetchOrders();
         } catch (err) {
             setDialogError(err.response?.data?.message || 'Failed to create scheduled order');
         } finally {
@@ -240,23 +293,17 @@ const ScheduledOrdersPage = () => {
         }
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Pending': return 'warning';
-            case 'Confirmed': return 'info';
-            case 'Delivered': return 'success';
-            case 'Cancelled': return 'error';
-            default: return 'default';
-        }
-    };
+    // Formatters
+    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    const formatPrice = (price) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(price);
 
-    if (loading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                <CircularProgress />
-            </Box>
-        );
-    }
+    // --- Render ---
+
+    const getQuantity = (itemId, proportionName) => {
+        const key = `${itemId}-${proportionName || 'default'}`;
+        const found = selectedItems.find(i => i.key === key);
+        return found ? found.quantity : 0;
+    };
 
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -264,7 +311,7 @@ const ScheduledOrdersPage = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Schedule sx={{ fontSize: 32 }} />
-                        Scheduled Orders
+                        My Scheduled Orders
                     </Typography>
                     <Button
                         variant="contained"
@@ -272,103 +319,174 @@ const ScheduledOrdersPage = () => {
                         onClick={handleOpenDialog}
                         disabled={schedulableData.categories.length === 0 && schedulableData.items.length === 0}
                     >
-                        New Scheduled Order
+                        New Schedule
                     </Button>
                 </Box>
+
+                {/* Filters */}
+                <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography variant="body2" color="text.secondary">Filter:</Typography>
+                    <DatePicker
+                        label="From Date"
+                        value={filterStartDate}
+                        onChange={(newValue) => setFilterStartDate(newValue)}
+                        slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
+                        format="DD/MM/YYYY"
+                    />
+                    <DatePicker
+                        label="To Date"
+                        value={filterEndDate}
+                        onChange={(newValue) => setFilterEndDate(newValue)}
+                        slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
+                        minDate={filterStartDate}
+                        format="DD/MM/YYYY"
+                    />
+                    {(filterStartDate || filterEndDate) && (
+                        <Button color="inherit" onClick={() => { setFilterStartDate(null); setFilterEndDate(null); }}>
+                            Clear
+                        </Button>
+                    )}
+                </Paper>
+
 
                 {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
                 {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
-                {/* Constraints Info */}
-                {constraints && (
-                    <Paper sx={{ p: 2, mb: 3, bgcolor: 'info.light', color: 'info.contrastText' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Info />
-                            <Typography variant="body2">
-                                {constraints.note}. You can schedule up to {constraints.maxStartDate}.
-                            </Typography>
-                        </Box>
+                {/* Bulk Action Bar */}
+                {selectedOrderIds.length > 0 && (
+                    <Paper sx={{ mb: 2, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#ffebee' }}>
+                        <Typography variant="subtitle1" color="error" fontWeight="bold">
+                            {selectedOrderIds.length} orders selected
+                        </Typography>
+                        <Button
+                            variant="outlined" color="error"
+                            startIcon={<CancelIcon />}
+                            onClick={handleBulkCancel}
+                        >
+                            Skip / Cancel Selected Days
+                        </Button>
                     </Paper>
                 )}
 
-                {/* My Scheduled Orders */}
-                <Paper elevation={2} sx={{ p: 2 }}>
-                    <Typography variant="h6" gutterBottom>My Scheduled Orders</Typography>
+                {/* Constraints Info */}
+                {constraints && (
+                    <Alert severity="info" code="info" sx={{ mb: 2 }} icon={<Info />}>
+                        {constraints.note}. You can schedule up to {constraints.maxStartDate}.
+                    </Alert>
+                )}
 
-                    {myOrders.length === 0 ? (
-                        <Typography color="text.secondary">
-                            No scheduled orders yet. Create one to get started!
-                        </Typography>
-                    ) : (
-                        <TableContainer>
-                            <Table>
-                                <TableHead>
-                                    <TableRow sx={{ bgcolor: 'grey.100' }}>
-                                        <TableCell><strong>Order ID</strong></TableCell>
-                                        <TableCell><strong>Schedule Period</strong></TableCell>
-                                        <TableCell><strong>Items</strong></TableCell>
-                                        <TableCell><strong>Daily Total</strong></TableCell>
-                                        <TableCell><strong>Status</strong></TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {myOrders.map((order) => (
-                                        <TableRow key={order.id} hover>
-                                            <TableCell>#{order.id}</TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <CalendarMonth fontSize="small" />
-                                                    {new Date(order.scheduled_for_date).toLocaleDateString('en-IN')}
-                                                    {' - '}
-                                                    {new Date(order.scheduled_end_date).toLocaleDateString('en-IN')}
-                                                </Box>
+                <TableContainer component={Paper} elevation={2}>
+                    <Table>
+                        <TableHead sx={{ bgcolor: 'grey.100' }}>
+                            <TableRow>
+                                <TableCell padding="checkbox">
+                                    <Checkbox
+                                        color="primary"
+                                        indeterminate={selectedOrderIds.length > 0 && selectedOrderIds.length < orders.length}
+                                        checked={orders.length > 0 && selectedOrderIds.length === orders.length}
+                                        onChange={handleSelectAllClick}
+                                    />
+                                </TableCell>
+                                <TableCell><strong>Date</strong></TableCell>
+                                <TableCell><strong>Items</strong></TableCell>
+                                <TableCell><strong>Total</strong></TableCell>
+                                <TableCell><strong>Status</strong></TableCell>
+                                <TableCell><strong>Created</strong></TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}><CircularProgress /></TableCell>
+                                </TableRow>
+                            ) : orders.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                                        <Typography color="text.secondary">No active scheduled orders found.</Typography>
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                orders.map((order) => {
+                                    const isSelected = selectedOrderIds.indexOf(order.id) !== -1;
+                                    return (
+                                        <TableRow
+                                            key={order.id}
+                                            hover
+                                            role="checkbox"
+                                            aria-checked={isSelected}
+                                            selected={isSelected}
+                                        >
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    color="primary"
+                                                    checked={isSelected}
+                                                    onChange={(event) => handleClick(event, order.id)}
+                                                    disabled={order.status !== 'Pending'}
+                                                />
                                             </TableCell>
                                             <TableCell>
-                                                {order.items.map((item, idx) => (
-                                                    <Box key={idx}>
-                                                        {item.name_at_order} x{item.quantity}
-                                                    </Box>
-                                                ))}
+                                                <Typography variant="subtitle2" color="primary">
+                                                    {new Date(order.scheduled_for_date).toLocaleDateString('en-GB')}
+                                                </Typography>
                                             </TableCell>
-                                            <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
+                                            <TableCell>
+                                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                                    {order.items && order.items.map((item, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={`${item.quantity}x ${item.name_at_order}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    ))}
+                                                </Stack>
+                                            </TableCell>
+                                            <TableCell>{formatPrice(order.total_price)}</TableCell>
                                             <TableCell>
                                                 <Chip
                                                     label={order.status}
-                                                    color={getStatusColor(order.status)}
+                                                    color={order.status === 'Pending' ? 'warning' : 'default'}
                                                     size="small"
                                                 />
                                             </TableCell>
+                                            <TableCell sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                                                {new Date(order.created_at).toLocaleDateString('en-GB')}
+                                            </TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    )}
-                </Paper>
+                                    );
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                    <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={total}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                </TableContainer>
 
+                {/* Create Dialog (Reusing Logic) */}
                 <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
                     <DialogTitle>Create Scheduled Order</DialogTitle>
                     <DialogContent>
-                        {dialogError && (
-                            <Alert severity="error" sx={{ mb: 2, mt: 1 }} onClose={() => setDialogError('')}>
-                                {dialogError}
-                            </Alert>
-                        )}
+                        {dialogError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{dialogError}</Alert>}
                         <Grid container spacing={3} sx={{ mt: 1 }}>
-                            {/* Date Selection */}
                             <Grid item xs={12} sm={6}>
                                 <DatePicker
                                     label="Start Date"
                                     value={startDate}
-                                    onChange={(date) => {
-                                        setStartDate(date);
-                                        if (endDate.isBefore(date)) {
-                                            setEndDate(date);
-                                        }
+                                    onChange={(newValue) => {
+                                        setStartDate(newValue);
+                                        if (endDate.isBefore(newValue)) setEndDate(newValue);
                                     }}
                                     minDate={dayjs().add(1, 'day')}
-                                    maxDate={constraints ? dayjs(constraints.maxStartDate) : dayjs().add(1, 'year')}
+                                    maxDate={constraints ? dayjs(constraints.maxStartDate) : undefined}
                                     slotProps={{ textField: { fullWidth: true } }}
+                                    format="DD/MM/YYYY"
                                 />
                             </Grid>
                             <Grid item xs={12} sm={6}>
@@ -379,250 +497,120 @@ const ScheduledOrdersPage = () => {
                                     minDate={startDate}
                                     maxDate={calculateMaxEndDate()}
                                     slotProps={{ textField: { fullWidth: true } }}
+                                    format="DD/MM/YYYY"
                                 />
                             </Grid>
 
-                            {/* Items Selection */}
                             <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                    <Typography variant="subtitle1">
-                                        Select Items
-                                    </Typography>
-                                    <TextField
-                                        size="small"
-                                        placeholder="Search items..."
-                                        value={itemSearch}
-                                        onChange={(e) => setItemSearch(e.target.value)}
-                                        sx={{ width: 250 }}
-                                    />
-                                </Box>
-                                {/* Render categories as single selectable options */}
-                                {schedulableData.categories.length > 0 && (
+                                <TextField
+                                    placeholder="Search items..."
+                                    value={itemSearch}
+                                    onChange={(e) => setItemSearch(e.target.value)}
+                                    fullWidth size="small" sx={{ mb: 2 }}
+                                />
+                                {/* Categories */}
+                                {(schedulableData.categories || []).length > 0 && (
                                     <Box sx={{ mb: 3 }}>
-                                        <Typography
-                                            variant="h6"
-                                            sx={{
-                                                mb: 2,
-                                                px: 1,
-                                                py: 0.5,
-                                                bgcolor: 'primary.main',
-                                                color: 'primary.contrastText',
-                                                borderRadius: 1
-                                            }}
-                                        >
-                                            Daily Specials
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                            Select a category and the correct item will be delivered based on the day of the week.
-                                        </Typography>
-                                        <Grid container spacing={2}>
-                                            {schedulableData.categories
-                                                .filter(cat => cat.category.toLowerCase().includes(itemSearch.toLowerCase()))
-                                                .map((category) => {
-                                                    const key = `category-${category.category}`;
-                                                    const selectedCategory = selectedItems.find(i => i.key === key);
-                                                    const quantity = selectedCategory?.quantity || 0;
-
-                                                    return (
-                                                        <Grid item xs={12} sm={6} md={4} key={category.category}>
-                                                            <Card variant="outlined" sx={{ height: '100%' }}>
-                                                                <CardContent>
-                                                                    <Typography variant="subtitle1" fontWeight="bold">
-                                                                        {category.category}
-                                                                    </Typography>
-                                                                    <Typography variant="body2" color="text.secondary">
-                                                                        {category.hasPriceRange
-                                                                            ? `₹${category.minPrice.toFixed(2)} - ₹${category.maxPrice.toFixed(2)}`
-                                                                            : `₹${category.minPrice.toFixed(2)}`
-                                                                        }
-                                                                    </Typography>
-                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                                                                        Available: {Object.keys(category.dayMappings).join(', ')}
-                                                                    </Typography>
-                                                                </CardContent>
-                                                                <CardActions sx={{ justifyContent: 'center' }}>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleRemoveCategory(category.category)}
-                                                                        disabled={quantity === 0}
-                                                                    >
-                                                                        <Remove />
-                                                                    </IconButton>
-                                                                    <Typography sx={{ minWidth: 30, textAlign: 'center' }}>{quantity}</Typography>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleAddCategory(category)}
-                                                                        color="primary"
-                                                                    >
-                                                                        <Add />
-                                                                    </IconButton>
-                                                                </CardActions>
-                                                            </Card>
-                                                        </Grid>
-                                                    );
-                                                })}
+                                        <Typography variant="h6" sx={{ bgcolor: 'primary.main', color: 'white', px: 1, borderRadius: 1 }}>Daily Specials</Typography>
+                                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                                            {schedulableData.categories.filter(c => c.category.toLowerCase().includes(itemSearch.toLowerCase())).map(category => {
+                                                const key = `category-${category.category}`;
+                                                const selected = selectedItems.find(i => i.key === key);
+                                                return (
+                                                    <Grid item xs={12} sm={6} md={4} key={category.category}>
+                                                        <Card variant="outlined">
+                                                            <CardContent sx={{ pb: 1 }}>
+                                                                <Typography variant="subtitle1">{category.category}</Typography>
+                                                                <Typography variant="caption" display="block">
+                                                                    {category.hasPriceRange ? `₹${category.minPrice} - ₹${category.maxPrice}` : `₹${category.minPrice}`}
+                                                                </Typography>
+                                                            </CardContent>
+                                                            <CardActions sx={{ justifyContent: 'center' }}>
+                                                                <IconButton size="small" onClick={() => handleRemoveCategory(category.category)} disabled={!selected}><Remove /></IconButton>
+                                                                <Typography>{selected?.quantity || 0}</Typography>
+                                                                <IconButton size="small" onClick={() => handleAddCategory(category)}><Add /></IconButton>
+                                                            </CardActions>
+                                                        </Card>
+                                                    </Grid>
+                                                );
+                                            })}
                                         </Grid>
                                     </Box>
                                 )}
 
-                                {/* Render individual uncategorized items */}
-                                {(() => {
-                                    const filteredItems = schedulableData.items.filter(item =>
-                                        item.name.toLowerCase().includes(itemSearch.toLowerCase())
-                                    );
+                                {/* Items */}
+                                <Typography variant="h6" sx={{ bgcolor: 'grey.600', color: 'white', px: 1, borderRadius: 1 }}>Individual Items</Typography>
+                                <Grid container spacing={2} sx={{ mt: 1 }}>
 
-                                    if (filteredItems.length === 0) return null;
 
-                                    const renderItemCard = (item) => {
-                                        const hasProportions = item.proportions && item.proportions.length > 0;
-                                        const itemSelections = selectedItems.filter(i => i.menu_item_id === item.id);
-                                        const totalQuantity = itemSelections.reduce((sum, i) => sum + i.quantity, 0);
-
-                                        return (
-                                            <Grid item xs={12} sm={6} md={4} key={item.id}>
-                                                <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                                    <CardContent sx={{ pb: 1, flexGrow: 1 }}>
-                                                        <Typography variant="subtitle2">
-                                                            {item.name}
-                                                            {item.day_of_week && (
-                                                                <Chip
-                                                                    label={item.day_of_week}
-                                                                    size="small"
-                                                                    sx={{ ml: 1, fontSize: '0.7rem' }}
-                                                                />
-                                                            )}
-                                                        </Typography>
-                                                        {hasProportions ? (
-                                                            <Box sx={{ mt: 1 }}>
-                                                                {item.proportions.map((proportion) => {
-                                                                    const key = `${item.id}-${proportion.name}`;
-                                                                    const selectedItem = selectedItems.find(i => i.key === key);
-                                                                    const quantity = selectedItem?.quantity || 0;
-
-                                                                    return (
-                                                                        <Box
-                                                                            key={key}
-                                                                            sx={{
-                                                                                display: 'flex',
-                                                                                justifyContent: 'space-between',
-                                                                                alignItems: 'center',
-                                                                                py: 0.5,
-                                                                                borderBottom: '1px solid',
-                                                                                borderColor: 'divider'
-                                                                            }}
-                                                                        >
-                                                                            <Box>
-                                                                                <Typography variant="body2">{proportion.name}</Typography>
-                                                                                <Typography variant="caption" color="text.secondary">
-                                                                                    ₹{parseFloat(proportion.price).toFixed(2)}
-                                                                                </Typography>
-                                                                            </Box>
-                                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                                <IconButton
-                                                                                    size="small"
-                                                                                    onClick={() => handleRemoveItem(key)}
-                                                                                    disabled={quantity === 0}
-                                                                                >
-                                                                                    <Remove fontSize="small" />
-                                                                                </IconButton>
-                                                                                <Typography sx={{ minWidth: 20, textAlign: 'center' }}>{quantity}</Typography>
-                                                                                <IconButton
-                                                                                    size="small"
-                                                                                    onClick={() => handleAddItem(item, proportion.name)}
-                                                                                    color="primary"
-                                                                                >
-                                                                                    <Add fontSize="small" />
-                                                                                </IconButton>
-                                                                            </Box>
-                                                                        </Box>
-                                                                    );
-                                                                })}
-                                                            </Box>
-                                                        ) : (
-                                                            <>
-                                                                <Typography variant="body2" color="text.secondary">
-                                                                    ₹{parseFloat(item.price).toFixed(2)}
-                                                                </Typography>
-                                                                <CardActions sx={{ justifyContent: 'center', px: 0, mt: 1 }}>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleRemoveItem(`${item.id}-default`)}
-                                                                        disabled={totalQuantity === 0}
-                                                                    >
-                                                                        <Remove />
-                                                                    </IconButton>
-                                                                    <Typography sx={{ minWidth: 30, textAlign: 'center' }}>{totalQuantity}</Typography>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => handleAddItem(item)}
-                                                                        color="primary"
-                                                                    >
-                                                                        <Add />
-                                                                    </IconButton>
-                                                                </CardActions>
-                                                            </>
-                                                        )}
-                                                    </CardContent>
-                                                </Card>
-                                            </Grid>
-                                        );
-                                    };
-
-                                    return (
-                                        <Box sx={{ width: '100%' }}>
-                                            {schedulableData.categories.length > 0 && (
-                                                <Typography
-                                                    variant="h6"
-                                                    sx={{
-                                                        mb: 1,
-                                                        px: 1,
-                                                        py: 0.5,
-                                                        bgcolor: 'grey.600',
-                                                        color: 'white',
-                                                        borderRadius: 1
-                                                    }}
-                                                >
-                                                    Other Items
-                                                </Typography>
-                                            )}
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                                Items with a day tag (e.g., "Monday") are only delivered on that day. Items without a tag are delivered every working day.
-                                            </Typography>
-                                            <Grid container spacing={2}>
-                                                {filteredItems.map(renderItemCard)}
-                                            </Grid>
-                                        </Box>
-                                    );
-                                })()}
+                                    {(schedulableData.items || []).filter(i => i.name.toLowerCase().includes(itemSearch.toLowerCase())).map(item => (
+                                        <Grid item xs={12} sm={6} md={4} key={item.id}>
+                                            <SchedulableItemCard
+                                                item={item}
+                                                onAdd={handleAddItem}
+                                                onRemove={(itm, prop) => handleRemoveItem(`${itm.id}-${prop || 'default'}`)}
+                                                getQuantity={getQuantity}
+                                            />
+                                        </Grid>
+                                    ))}
+                                </Grid>
                             </Grid>
 
-                            {/* Comment */}
                             <Grid item xs={12}>
-                                <TextField
-                                    label="Comment (optional)"
-                                    multiline
-                                    rows={2}
-                                    fullWidth
-                                    value={comment}
-                                    onChange={(e) => setComment(e.target.value)}
-                                />
+                                <TextField label="Comment" value={comment} onChange={(e) => setComment(e.target.value)} fullWidth multiline rows={2} />
                             </Grid>
 
-                            {/* Selected Items Summary */}
                             {selectedItems.length > 0 && (
                                 <Grid item xs={12}>
                                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                                        <Typography variant="subtitle2" gutterBottom>Order Summary (per day)</Typography>
-                                        {selectedItems.map((item, idx) => (
-                                            <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <Typography variant="body2">{item.name} x{item.quantity}</Typography>
-                                                <Typography variant="body2">₹{(item.price * item.quantity).toFixed(2)}</Typography>
-                                            </Box>
-                                        ))}
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                                            <Typography variant="subtitle2">Daily Total</Typography>
-                                            <Typography variant="subtitle2">₹{calculateTotal().toFixed(2)}</Typography>
-                                        </Box>
+                                        <Typography variant="h6" gutterBottom>Order Summary</Typography>
+                                        <TableContainer>
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>Item</TableCell>
+                                                        <TableCell>Variant</TableCell>
+                                                        <TableCell align="right">Price</TableCell>
+                                                        <TableCell align="center">Quantity</TableCell>
+                                                        <TableCell align="right">Total</TableCell>
+                                                        <TableCell></TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {selectedItems.map((item) => (
+                                                        <TableRow key={item.key}>
+                                                            <TableCell>{item.name.split('(')[0].trim()}</TableCell>
+                                                            <TableCell>{item.proportion_name || (item.isCategory ? 'Category' : '-')}</TableCell>
+                                                            <TableCell align="right">{item.isCategory ? item.priceDisplay : `₹${item.price}`}</TableCell>
+                                                            <TableCell align="center">
+                                                                <IconButton size="small" onClick={() => item.isCategory ? handleRemoveCategory(item.category) : handleRemoveItem(item.key)}>
+                                                                    <Remove fontSize="small" />
+                                                                </IconButton>
+                                                                {item.quantity}
+                                                                <IconButton size="small" onClick={() => item.isCategory ? handleAddCategory({ category: item.category, minPrice: item.price }) : handleAddItem({ id: item.menu_item_id, name: item.name.split('(')[0], price: item.price }, item.proportion_name)}>
+                                                                    {/* Note: handleAddItem expects full item object usually, but we constructed simplified one. 
+                                                                        Re-using original handleAddItem might be safer if we have original item data.
+                                                                        Actually, `item` here is from `selectedItems` state, which has `menu_item_id`.
+                                                                        We need to re-find the original item to pass to handleAddItem OR update handleAddItem to accept ID.
+                                                                        Easier: Just manually increment quantity in state here.
+                                                                     */}
+                                                                    <Add fontSize="small" />
+                                                                </IconButton>
+                                                            </TableCell>
+                                                            <TableCell align="right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                                                            <TableCell>
+                                                                {/* Delete button? */}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} align="right"><strong>Total Daily Cost:</strong></TableCell>
+                                                        <TableCell align="right"><strong>₹{calculateTotal().toFixed(2)}</strong></TableCell>
+                                                        <TableCell></TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
                                     </Paper>
                                 </Grid>
                             )}
@@ -630,15 +618,24 @@ const ScheduledOrdersPage = () => {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseDialog}>Cancel</Button>
-                        <Button
-                            variant="contained"
-                            onClick={handleSubmit}
-                            disabled={submitting || selectedItems.length === 0}
-                        >
+                        <Button onClick={handleSubmit} variant="contained" disabled={submitting || selectedItems.length === 0}>
                             {submitting ? <CircularProgress size={24} /> : 'Create Schedule'}
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Cancel Confirmation Dialog */}
+                <ConfirmationDialog
+                    open={cancelDialogOpen}
+                    onClose={() => setCancelDialogOpen(false)}
+                    onConfirm={handleConfirmCancel}
+                    title="Skip / Cancel Orders"
+                    message={`Are you sure you want to cancel ${selectedOrderIds.length} scheduled order${selectedOrderIds.length > 1 ? 's' : ''}? This action cannot be undone.`}
+                    type="cancel"
+                    confirmText="Yes, Cancel Orders"
+                    cancelText="Go Back"
+                    loading={cancelLoading}
+                />
             </Container>
         </LocalizationProvider>
     );

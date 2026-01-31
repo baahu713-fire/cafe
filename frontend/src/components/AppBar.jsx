@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -20,15 +20,21 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import MenuIcon from '@mui/icons-material/Menu';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PersonIcon from '@mui/icons-material/Person';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../hooks/useCart';
 import HoverAvatar from './HoverAvatar';
+import NotificationBell from './NotificationBell';
 
 const AppNav = () => {
   const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = React.useState(null);
+  const [adminAnchorEl, setAdminAnchorEl] = React.useState(null);
+  const navigate = useNavigate();
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -41,9 +47,19 @@ const AppNav = () => {
     setMobileMoreAnchorEl(event.currentTarget);
   };
 
+  const handleAdminMenuOpen = (event) => {
+    setAdminAnchorEl(event.currentTarget);
+  };
+
   const handleMenuClose = () => {
     setAnchorEl(null);
     setMobileMoreAnchorEl(null);
+    setAdminAnchorEl(null);
+  };
+
+  const handleAdminNavigate = (path) => {
+    navigate(path);
+    handleMenuClose();
   };
 
   const handleLogout = () => {
@@ -61,14 +77,18 @@ const AppNav = () => {
       open={Boolean(anchorEl)}
       onClose={handleMenuClose}
     >
-      <MenuItem component={RouterLink} to="/profile" onClick={handleMenuClose}>Profile</MenuItem>
+      <MenuItem component={RouterLink} to="/profile" onClick={handleMenuClose}>
+        <PersonIcon sx={{ mr: 1, fontSize: 20 }} /> Profile
+      </MenuItem>
       <MenuItem component={RouterLink} to="/bill-summary" onClick={handleMenuClose}>
         <ReceiptIcon sx={{ mr: 1, fontSize: 20 }} /> Bill Summary
       </MenuItem>
       <MenuItem component={RouterLink} to="/scheduled-orders" onClick={handleMenuClose}>
         <ScheduleIcon sx={{ mr: 1, fontSize: 20 }} /> Scheduled Orders
       </MenuItem>
-      <MenuItem onClick={handleLogout}>Logout</MenuItem>
+      <MenuItem onClick={handleLogout}>
+        <LogoutIcon sx={{ mr: 1, fontSize: 20 }} /> Logout
+      </MenuItem>
     </Menu>
   );
 
@@ -186,16 +206,40 @@ const AppNav = () => {
                     My Orders
                   </Button>
                 )}
-                {user && user.isAdmin && (
-                  <Button color="inherit" component={RouterLink} to="/admin">
-                    Admin Dashboard
-                  </Button>
+                {user && (user.isAdmin || user.isSuperAdmin) && (
+                  <>
+                    <Button
+                      color="inherit"
+                      onClick={handleAdminMenuOpen}
+                      endIcon={<ExpandMoreIcon />}
+                    >
+                      Admin Dashboard
+                    </Button>
+                    <Menu
+                      anchorEl={adminAnchorEl}
+                      open={Boolean(adminAnchorEl)}
+                      onClose={handleMenuClose}
+                    >
+                      <MenuItem onClick={() => handleAdminNavigate('/admin/orders')}>Manage Orders</MenuItem>
+                      <MenuItem onClick={() => handleAdminNavigate('/admin/items')}>Manage Items</MenuItem>
+                      <MenuItem onClick={() => handleAdminNavigate('/admin/daily-summary')}>Daily Consumption</MenuItem>
+                      <MenuItem onClick={() => handleAdminNavigate('/admin/settlement')}>Settlement User Bills</MenuItem>
+                      <MenuItem onClick={() => handleAdminNavigate('/admin/bills')}>Generate Bills</MenuItem>
+                      {user.isSuperAdmin && (
+                        <MenuItem onClick={() => handleAdminNavigate('/admin/users')}>Manage Users</MenuItem>
+                      )}
+                      {user.isSuperAdmin && (
+                        <MenuItem onClick={() => handleAdminNavigate('/admin/cmc')}>Manage CMC</MenuItem>
+                      )}
+                    </Menu>
+                  </>
                 )}
               </Box>
 
               {user ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography variant="body2" sx={{ mr: 2 }}>Logged in as: {user.username}</Typography>
+                  <NotificationBell />
                   <IconButton component={RouterLink} to="/favorites" color="inherit">
                     <FavoriteIcon />
                   </IconButton>

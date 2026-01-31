@@ -23,6 +23,7 @@ const cmcRoutes = require('./src/routes/cmcRoutes');
 const timeSlotRoutes = require('./src/routes/timeSlotRoutes');
 const billRoutes = require('./src/routes/billRoutes');
 const scheduledOrderRoutes = require('./src/routes/scheduledOrderRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -173,6 +174,7 @@ const startServer = async () => {
     app.use('/api/time-slots', timeSlotRoutes);
     app.use('/api/bills', billRoutes);
     app.use('/api/scheduled-orders', scheduledOrderRoutes);
+    app.use('/api/notifications', notificationRoutes);
 
     // 404 and Error Handlers
     app.use((req, res, next) => {

@@ -15,6 +15,9 @@ router.get('/my-orders', orderController.getMyOrders);
 // GET /api/orders - Get all orders (admin only)
 router.get('/', admin, orderController.getAllOrders);
 
+// GET /api/orders/daily-summary - Get aggregated daily items (admin only)
+router.get('/daily-summary', admin, orderController.getDailySummary);
+
 // GET /api/orders/:id - Get a specific order by ID (user and admin)
 router.get('/:id', orderController.getOrderById);
 
@@ -32,6 +35,8 @@ router.post('/:orderId/feedback', orderController.addFeedback);
 
 // POST /api/orders/settle-user/:userId - Settle all delivered orders for a specific user (admin only)
 router.post('/settle-user/:userId', admin, orderController.settleUserOrders);
+
+
 
 
 module.exports = router;

@@ -1,6 +1,10 @@
 const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
 
+const calculateTotal = (items) => {
+    return items.reduce((sum, item) => sum + (parseFloat(item.price_at_order) * item.quantity), 0);
+};
+
 /**
  * Creates a scheduled order for a user.
  * Items scheduled for a date range will be auto-created as regular orders.
@@ -155,147 +159,150 @@ const createScheduledOrder = async (userId, items, startDate, endDate, comment =
             throw new Error('Cannot schedule beyond the current year');
         }
 
-        // Get schedulable items/categories for lookup
+        // 1. Pre-fetch all necessary data
         const schedulableData = await getSchedulableMenuItems();
 
-        // Validate items and calculate total
-        let totalPrice = 0;
-        const validatedItems = [];
-        const categorySelections = []; // Track category selections for expanding later
+        // Map individual menu items for quick lookup
+        const menuItemMap = new Map();
+        // Since getSchedulableMenuItems returns 'items' containing all schedulable items
+        schedulableData.items.forEach(item => menuItemMap.set(item.id, item));
 
-        for (const item of items) {
-            if (item.category) {
-                // Category-based selection
-                const categoryData = schedulableData.categories.find(c => c.category === item.category);
-                if (!categoryData) {
-                    throw new Error(`Category '${item.category}' is not available for scheduling`);
-                }
+        // 2. Parse user requests into a cleaner format
+        // Separate category requests from individual item requests
+        const requestedCategories = items.filter(i => i.category);
+        const requestedItems = items.filter(i => !i.category);
 
-                // Store category selection for expansion after order creation
-                categorySelections.push({
-                    category: item.category,
-                    quantity: item.quantity,
-                    dayMappings: categoryData.dayMappings
-                });
+        // Validate individual items existence
+        for (const reqItem of requestedItems) {
+            if (!menuItemMap.has(reqItem.menu_item_id)) {
+                throw new Error(`Menu item ${reqItem.menu_item_id} is not schedulable or does not exist`);
+            }
+        }
 
-                // Calculate estimated total based on days in range
-                // This will be recalculated precisely during order item creation
-                const dayCount = Object.keys(categoryData.dayMappings).length;
-                const avgPrice = (categoryData.minPrice + categoryData.maxPrice) / 2;
-                totalPrice += avgPrice * item.quantity; // Approximate for now
+        // Validate categories existence
+        for (const reqCat of requestedCategories) {
+            if (!schedulableData.categories.find(c => c.category === reqCat.category)) {
+                throw new Error(`Category '${reqCat.category}' is not available for scheduling`);
+            }
+        }
 
-            } else {
-                // Individual item selection
-                const menuItem = await getSchedulableMenuItem(item.menu_item_id);
-                if (!menuItem) {
-                    throw new Error(`Menu item ${item.menu_item_id} is not schedulable or does not exist`);
+        const createdOrders = [];
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        // 3. Iterate through each day in the range
+        // Loop date
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            // Skip non-working days if necessary? (e.g. weekends) 
+            // Currently assuming cafe operates 7 days or items define their availability.
+            // If an item has NO day_of_week, it's available every day.
+
+            const currentDayName = dayNames[d.getDay()];
+            const dailyItemsToInsert = [];
+            let dailyTotal = 0;
+
+            // Process Individual Items
+            for (const reqItem of requestedItems) {
+                const menuItem = menuItemMap.get(reqItem.menu_item_id);
+
+                // CHECK: Does this item belong to a specific day?
+                if (menuItem.day_of_week && menuItem.day_of_week !== currentDayName) {
+                    continue; // Skip Monday Special on Tuesday
                 }
 
                 let priceAtOrder = parseFloat(menuItem.price);
                 let nameAtOrder = menuItem.name;
+                let proportionName = reqItem.proportion_name || null;
 
-                if (item.proportion_name) {
+                if (proportionName) {
                     const proportions = menuItem.proportions || [];
-                    const proportion = proportions.find(p => p.name === item.proportion_name);
-                    if (!proportion) {
-                        throw new Error(`Proportion '${item.proportion_name}' not found for ${menuItem.name}`);
-                    }
-                    priceAtOrder = parseFloat(proportion.price);
-                    nameAtOrder = `${menuItem.name} (${item.proportion_name})`;
+                    const p = proportions.find(prop => prop.name === proportionName);
+                    if (!p) throw new Error(`Proportion '${proportionName}' invalid for item ${menuItem.name}`);
+                    priceAtOrder = parseFloat(p.price);
+                    nameAtOrder = `${menuItem.name} (${proportionName})`;
                 }
 
-                const itemTotal = priceAtOrder * item.quantity;
-                totalPrice += itemTotal;
+                const lineTotal = priceAtOrder * reqItem.quantity;
+                dailyTotal += lineTotal;
 
-                validatedItems.push({
-                    menu_item_id: item.menu_item_id,
-                    quantity: item.quantity,
-                    proportion_name: item.proportion_name,
+                dailyItemsToInsert.push({
+                    menu_item_id: menuItem.id,
+                    quantity: reqItem.quantity,
                     price_at_order: priceAtOrder,
                     name_at_order: nameAtOrder,
-                    category: null
+                    proportion_name: proportionName
                 });
             }
-        }
 
-        // Create the scheduled order first (with approximate total)
-        const { rows: [order] } = await client.query(
-            `INSERT INTO orders (
-                user_id, status, total_price, comment,
-                is_scheduled, scheduled_for_date, scheduled_end_date
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *`,
-            [userId, ORDER_STATUS.PENDING, totalPrice, comment, true, startDate, endDate]
-        );
-
-        // Insert regular order items
-        for (const item of validatedItems) {
-            await client.query(
-                `INSERT INTO order_items (
-                    order_id, menu_item_id, quantity, price_at_order, name_at_order, proportion_name
-                ) VALUES ($1, $2, $3, $4, $5, $6)`,
-                [order.id, item.menu_item_id, item.quantity, item.price_at_order, item.name_at_order, item.proportion_name]
-            );
-        }
-
-        // Expand category selections into day-specific items
-        // For each category, insert a special entry with category info
-        // The actual delivery will be determined based on the delivery date
-        let actualCategoryTotal = 0;
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-        for (const catSelection of categorySelections) {
-            // For category orders, we store the items that will be delivered
-            // We need to figure out which days fall within the date range
-            const currentDate = new Date(start);
-            while (currentDate <= end) {
-                const dayName = dayNames[currentDate.getDay()];
-                const dayMapping = catSelection.dayMappings[dayName];
+            // Process Categories
+            for (const reqCat of requestedCategories) {
+                const categoryData = schedulableData.categories.find(c => c.category === reqCat.category);
+                const dayMapping = categoryData.dayMappings[currentDayName];
 
                 if (dayMapping) {
-                    // This day has a menu item for this category
+                    // This category has an item for today
                     const priceAtOrder = dayMapping.price;
-                    const nameAtOrder = `${catSelection.category} (${dayName})`;
-                    actualCategoryTotal += priceAtOrder * catSelection.quantity;
+                    const nameAtOrder = `${categoryData.category} (${currentDayName})`; // e.g. "Lunch (Monday)" implies the rotating item
+                    const lineTotal = priceAtOrder * reqCat.quantity;
+                    dailyTotal += lineTotal;
 
-                    validatedItems.push({
+                    dailyItemsToInsert.push({
                         menu_item_id: dayMapping.id,
-                        quantity: catSelection.quantity,
-                        proportion_name: null,
+                        quantity: reqCat.quantity,
                         price_at_order: priceAtOrder,
                         name_at_order: nameAtOrder,
-                        category: catSelection.category,
-                        delivery_date: currentDate.toISOString().split('T')[0]
+                        proportion_name: null // Category items usually don't have proportions in this simplified view, or it's built-in
                     });
+                }
+            }
 
+            // If we have items for this day, create an order
+            if (dailyItemsToInsert.length > 0) {
+                // Formatting date as YYYY-MM-DD for DB
+                const scheduledDateStr = d.toISOString().split('T')[0];
+
+                const { rows: [newOrder] } = await client.query(
+                    `INSERT INTO orders (
+                        user_id, status, total_price, comment,
+                        is_scheduled, scheduled_for_date, scheduled_end_date
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    RETURNING *`,
+                    [
+                        userId,
+                        ORDER_STATUS.PENDING,
+                        dailyTotal,
+                        comment,
+                        true,
+                        scheduledDateStr,
+                        scheduledDateStr // End date is same as start for daily orders
+                    ]
+                );
+
+                // Insert items
+                for (const item of dailyItemsToInsert) {
                     await client.query(
                         `INSERT INTO order_items (
                             order_id, menu_item_id, quantity, price_at_order, name_at_order, proportion_name
                         ) VALUES ($1, $2, $3, $4, $5, $6)`,
-                        [order.id, dayMapping.id, catSelection.quantity, priceAtOrder, nameAtOrder, null]
+                        [newOrder.id, item.menu_item_id, item.quantity, item.price_at_order, item.name_at_order, item.proportion_name]
                     );
                 }
 
-                currentDate.setDate(currentDate.getDate() + 1);
+                // Add items to result object for frontend response
+                newOrder.items = dailyItemsToInsert;
+                createdOrders.push(newOrder);
             }
-        }
-
-        // Update order total with actual category-based pricing
-        if (categorySelections.length > 0) {
-            const actualTotal = validatedItems.reduce((sum, item) => sum + (item.price_at_order * item.quantity), 0);
-            await client.query(
-                'UPDATE orders SET total_price = $1 WHERE id = $2',
-                [actualTotal, order.id]
-            );
-            order.total_price = actualTotal;
         }
 
         await client.query('COMMIT');
 
-        return {
-            ...order,
-            items: validatedItems
-        };
+        // Return the created orders (or maybe just the first one/summary? Frontend expects an object, but we created many.)
+        // The original controller returned `res.status(201).json(order)`.
+        // If we change this to return an array, the frontend might break if it expects a single order object.
+        // However, standard REST for "bulk create" might return list. 
+        // Let's return the first one as "primary" or wrap them. 
+        // Given the frontend "ScheduledOrdersPage" just refreshes the list, returning { count: N, orders: [] } or just the array is fine.
+        // Let's return the array. The controller should handle it.
+        return { created_count: createdOrders.length, orders: createdOrders };
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -311,14 +318,36 @@ const createScheduledOrder = async (userId, items, startDate, endDate, comment =
  * @param {boolean} includeCompleted 
  * @returns {Promise<Array>}
  */
-const getScheduledOrdersByUserId = async (userId, includeCompleted = false) => {
-    let statusFilter = "AND o.status NOT IN ('Cancelled')";
+const getScheduledOrdersByUserId = async (userId, includeCompleted = false, page = 1, limit = 10, startDate, endDate) => {
+    const offset = (page - 1) * limit;
+    let whereClause = "WHERE o.user_id = $1 AND o.is_scheduled = true";
+    const params = [userId];
+    let paramIndex = 2; // Next param index
+
     if (!includeCompleted) {
-        statusFilter = "AND o.status NOT IN ('Cancelled', 'Settled', 'Completed')";
+        whereClause += " AND o.status NOT IN ('Cancelled', 'Settled', 'Completed')";
+    } else {
+        whereClause += " AND o.status NOT IN ('Cancelled')";
     }
 
-    const { rows } = await db.query(
-        `SELECT 
+    if (startDate) {
+        whereClause += ` AND o.scheduled_for_date >= $${paramIndex}`;
+        params.push(startDate);
+        paramIndex++;
+    }
+
+    if (endDate) {
+        whereClause += ` AND o.scheduled_for_date <= $${paramIndex}`;
+        params.push(endDate);
+        paramIndex++;
+    }
+
+    const countQuery = `SELECT COUNT(*) FROM orders o ${whereClause}`;
+    const { rows: countResult } = await db.query(countQuery, params);
+    const total = parseInt(countResult[0].count, 10);
+
+    const dataQuery = `
+        SELECT 
             o.*,
             COALESCE((
                 SELECT json_agg(json_build_object(
@@ -332,12 +361,43 @@ const getScheduledOrdersByUserId = async (userId, includeCompleted = false) => {
                 FROM order_items oi WHERE oi.order_id = o.id
             ), '[]'::json) as items
         FROM orders o
-        WHERE o.user_id = $1 AND o.is_scheduled = true ${statusFilter}
-        ORDER BY o.scheduled_for_date ASC`,
-        [userId]
-    );
+        ${whereClause}
+        ORDER BY o.scheduled_for_date ASC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
 
-    return rows;
+    const queryParams = [...params, limit, offset];
+
+    const { rows } = await db.query(dataQuery, queryParams);
+
+    return { orders: rows, total };
+};
+
+const cancelScheduledOrdersBulk = async (userId, orderIds) => {
+    if (!orderIds || orderIds.length === 0) return { cancelled: 0 };
+
+    const client = await db.pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const { rowCount } = await client.query(
+            `UPDATE orders 
+             SET status = '${ORDER_STATUS.CANCELLED}', 
+                 scheduled_cancelled_by = $1, 
+                 scheduled_cancelled_at = NOW()
+             WHERE id = ANY($2::int[]) 
+               AND status NOT IN ('${ORDER_STATUS.CANCELLED}', '${ORDER_STATUS.SETTLED}', '${ORDER_STATUS.DELIVERED}')`,
+            [userId, orderIds]
+        );
+
+        await client.query('COMMIT');
+        return { cancelled: rowCount };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 };
 
 /**
@@ -436,6 +496,7 @@ module.exports = {
     getScheduledOrdersByUserId,
     getAllScheduledOrders,
     cancelScheduledOrder,
+    cancelScheduledOrdersBulk,
     getSchedulableMenuItems,
     getSchedulingConstraints,
     calculateMaxEndDate

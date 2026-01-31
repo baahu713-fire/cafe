@@ -6,6 +6,10 @@ import {
   Select, MenuItem, Button, Typography, Box, CircularProgress, Dialog, DialogActions,
   DialogContent, DialogContentText, DialogTitle, TextField, TablePagination, Chip
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 import HoverAvatar from '../HoverAvatar';
 
 const OrderDetailsDialog = ({ order, open, onClose }) => {
@@ -66,7 +70,7 @@ const OrderManagement = () => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -175,7 +179,7 @@ const OrderManagement = () => {
       .filter(order => {
         if (!filterDate) return true;
         const orderDate = new Date(order.created_at).toISOString().split('T')[0];
-        return orderDate === filterDate;
+        return orderDate === filterDate.format('YYYY-MM-DD');
       });
   }, [orders, searchTerm, filterDate]);
 
@@ -197,156 +201,155 @@ const OrderManagement = () => {
   }
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Typography variant="h5" gutterBottom>Manage All Orders</Typography>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-        <TextField
-          label="Search by ID, User, or Status"
-          variant="outlined"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          label="Filter by Date"
-          type="date"
-          variant="outlined"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-        <Button onClick={() => setFilterDate('')} variant="outlined">Clear</Button>
-      </Box>
-      <TableContainer>
-        <Table stickyHeader aria-label="sticky table">
-          <TableHead>
-            <TableRow>
-              <TableCell>Order ID</TableCell>
-              <TableCell>User</TableCell>
-              <TableCell>Order Date</TableCell>
-              <TableCell>Total Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Disputed</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredOrders.map((order) => (
-              <TableRow hover key={order.id}>
-                <TableCell component="th" scope="row">#{order.id}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <HoverAvatar
-                      src={`/api/users/${order.user_id}/photo`}
-                      alt={order.user_name}
-                      name={order.user_name}
-                      size={32}
-                      sx={{ mr: 2 }}
-                    />
-                    <div>
-                      <Typography variant="body2">{order.user_name}</Typography>
-                      <Typography variant="caption" color="text.secondary">{order.username}</Typography>
-                    </div>
-                  </Box>
-                </TableCell>
-                <TableCell>{new Date(order.created_at).toLocaleString()}</TableCell>
-                <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
-                <TableCell>
-                  <Select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)}
-                    size="small"
-                    sx={{ minWidth: 120 }}
-                  >
-                    {Object.values(ORDER_STATUS).map(status => (
-                      <MenuItem key={status} value={status}
-                        disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status}
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h5" gutterBottom>Manage All Orders</Typography>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+          <TextField
+            label="Search by ID, User, or Status"
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            fullWidth
+          />
+          <DatePicker
+            label="Filter by Date"
+            value={filterDate}
+            onChange={(newValue) => setFilterDate(newValue)}
+            slotProps={{ textField: { size: 'medium' } }}
+            format="DD/MM/YYYY"
+          />
+          <Button onClick={() => setFilterDate(null)} variant="outlined">Clear</Button>
+        </Box>
+        <TableContainer>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                <TableCell>Order ID</TableCell>
+                <TableCell>User</TableCell>
+                <TableCell>Order Date</TableCell>
+                <TableCell>Total Price</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Disputed</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredOrders.map((order) => (
+                <TableRow hover key={order.id}>
+                  <TableCell component="th" scope="row">#{order.id}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <HoverAvatar
+                        src={`/api/users/${order.user_id}/photo`}
+                        alt={order.user_name}
+                        name={order.user_name}
+                        size={32}
+                        sx={{ mr: 2 }}
+                      />
+                      <div>
+                        <Typography variant="body2">{order.user_name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{order.username}</Typography>
+                      </div>
+                    </Box>
+                  </TableCell>
+                  <TableCell>{new Date(order.created_at).toLocaleString('en-GB')}</TableCell>
+                  <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                      disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(order.status)}
+                      size="small"
+                      sx={{ minWidth: 120 }}
+                    >
+                      {Object.values(ORDER_STATUS).map(status => (
+                        <MenuItem key={status} value={status}
+                          disabled={[ORDER_STATUS.SETTLED, ORDER_STATUS.CANCELLED].includes(status) && order.status !== status}
+                        >
+                          {status}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    {order.disputed && <Chip label="Disputed" color="error" />}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleViewDetails(order)}
+                      sx={{ mr: 1 }}
+                    >
+                      View Details
+                    </Button>
+                    {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED].includes(order.status) && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        onClick={() => handleOpenCancelDialog(order.id)}
                       >
-                        {status}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  {order.disputed && <Chip label="Disputed" color="error" />}
-                </TableCell>
-                <TableCell align="right">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleViewDetails(order)}
-                    sx={{ mr: 1 }}
-                  >
-                    View Details
-                  </Button>
-                  {[ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED].includes(order.status) && (
+                        Cancel
+                      </Button>
+                    )}
                     <Button
                       variant="contained"
-                      color="error"
+                      color="success"
                       size="small"
-                      onClick={() => handleOpenCancelDialog(order.id)}
+                      sx={{ ml: 1 }}
+                      onClick={() => handleOpenSettleDialog(order.id)}
+                      disabled={order.status !== ORDER_STATUS.DELIVERED}
                     >
-                      Cancel
+                      Settle
                     </Button>
-                  )}
-                  <Button
-                    variant="contained"
-                    color="success"
-                    size="small"
-                    sx={{ ml: 1 }}
-                    onClick={() => handleOpenSettleDialog(order.id)}
-                    disabled={order.status !== ORDER_STATUS.DELIVERED}
-                  >
-                    Settle
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={totalOrders}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={totalOrders}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
 
-      <OrderDetailsDialog order={selectedOrderDetails} open={!!selectedOrderDetails} onClose={handleCloseDetails} />
+        <OrderDetailsDialog order={selectedOrderDetails} open={!!selectedOrderDetails} onClose={handleCloseDetails} />
 
-      <Dialog open={openSettleDialog} onClose={handleCloseSettleDialog}>
-        <DialogTitle>Settle Order Bill?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to mark order #{selectedOrderId} as settled? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseSettleDialog}>Cancel</Button>
-          <Button onClick={handleSettleOrder} color="primary" autoFocus>Confirm Settle</Button>
-        </DialogActions>
-      </Dialog>
+        <Dialog open={openSettleDialog} onClose={handleCloseSettleDialog}>
+          <DialogTitle>Settle Order Bill?</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to mark order #{selectedOrderId} as settled? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseSettleDialog}>Cancel</Button>
+            <Button onClick={handleSettleOrder} color="primary" autoFocus>Confirm Settle</Button>
+          </DialogActions>
+        </Dialog>
 
-      <Dialog open={openCancelDialog} onClose={handleCloseCancelDialog}>
-        <DialogTitle>Cancel Order?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to cancel order #{selectedOrderId}? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCancelDialog}>Back</Button>
-          <Button onClick={handleCancelOrder} color="error" autoFocus>Confirm Cancel</Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
+        <Dialog open={openCancelDialog} onClose={handleCloseCancelDialog}>
+          <DialogTitle>Cancel Order?</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to cancel order #{selectedOrderId}? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseCancelDialog}>Back</Button>
+            <Button onClick={handleCancelOrder} color="error" autoFocus>Confirm Cancel</Button>
+          </DialogActions>
+        </Dialog>
+      </Paper>
+    </LocalizationProvider>
   );
 };
 

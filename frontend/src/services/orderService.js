@@ -14,9 +14,9 @@ export const placeOrder = async (orderData) => {
     return adaptOrderToFrontend(response.data);
 };
 
-export const getMyOrders = async (page = 1, limit = 5) => {
+export const getMyOrders = async (page = 1, limit = 5, startDate, endDate) => {
     const response = await api.get('/orders/my-orders', {
-        params: { page, limit }
+        params: { page, limit, startDate, endDate }
     });
     // Assuming backend returns { orders: [...], total: ... }
     return {

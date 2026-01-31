@@ -2,6 +2,7 @@ const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
 const { isWithinTimeSlot, TIME_SLOTS, getCurrentTimeIST } = require('../constants/timeSlots');
 const { DAYS_OF_WEEK } = require('../constants/dailySpecials');
+const notificationService = require('./notificationService');
 
 // A helper to format order data consistently
 const parseOrder = (order) => {
@@ -18,7 +19,7 @@ const parseOrder = (order) => {
     };
 };
 
-const createOrder = async (orderData, userId) => {
+const createOrder = async (orderData, userId, createdByAdmin = null) => {
     const { items, comment } = orderData;
     if (!items || items.length === 0) {
         throw new Error('An order must contain at least one item.');
@@ -108,8 +109,8 @@ const createOrder = async (orderData, userId) => {
         }
 
         const { rows: [order] } = await client.query(
-            'INSERT INTO orders (user_id, total_price, status, comment) VALUES ($1, $2, $3, $4) RETURNING id, created_at, status, comment',
-            [userId, totalOrderPrice, ORDER_STATUS.PENDING, comment]
+            'INSERT INTO orders (user_id, total_price, status, comment, created_by_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, status, comment, created_by_admin',
+            [userId, totalOrderPrice, ORDER_STATUS.PENDING, comment, createdByAdmin]
         );
 
         const orderItemsQueries = createdOrderItems.map(item => {
@@ -121,6 +122,17 @@ const createOrder = async (orderData, userId) => {
 
         await Promise.all(orderItemsQueries);
         await client.query('COMMIT');
+
+        // Create notification for the user if order was placed by admin on their behalf
+        if (createdByAdmin && createdByAdmin !== userId) {
+            try {
+                const message = `An order of ₹${totalOrderPrice.toFixed(2)} has been placed on your behalf. You can cancel or dispute within 24 hours.`;
+                await notificationService.createNotification(userId, order.id, 'admin_order', message);
+            } catch (notifError) {
+                console.error('Failed to create notification for admin order:', notifError);
+                // Don't fail the order creation if notification fails
+            }
+        }
 
         return { ...order, total_price: totalOrderPrice, items: createdOrderItems };
 
@@ -135,7 +147,7 @@ const createOrder = async (orderData, userId) => {
 const getOrderById = async (orderId, user) => {
     const params = [orderId];
     let userClause = '';
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
         userClause = 'AND o.user_id = $2';
         params.push(user.userId);
     }
@@ -170,11 +182,40 @@ const getOrderById = async (orderId, user) => {
     return parseOrder(order);
 };
 
-const getOrdersByUserId = async (userId, page, limit) => {
+const getOrdersByUserId = async (userId, page, limit, startDate, endDate) => {
     const offset = (page - 1) * limit;
+    const params = [userId];
+    // Filter out future scheduled orders:
+    // Show if (NOT scheduled) OR (scheduled AND date <= today)
+    let whereClause = 'WHERE user_id = $1 AND (is_scheduled = false OR scheduled_for_date <= CURRENT_DATE)';
+    let paramIndex = 2;
 
-    const totalQuery = 'SELECT COUNT(*) FROM orders WHERE user_id = $1';
-    const totalResult = await db.query(totalQuery, [userId]);
+    if (startDate) {
+        whereClause += ` AND created_at >= $${paramIndex}`;
+        params.push(startDate);
+        paramIndex++;
+    }
+
+    if (endDate) {
+        // Add 1 day to end date to include the entire end date (as inputs are usually YYYY-MM-DD)
+        // Or assume endDate includes time. Let's assume input is YYYY-MM-DD and we want up to end of that day.
+        // Actually, easiest is just simple comparison if input strings are standard.
+        // But for "End Date", if user picks "2023-10-25", they expect orders on 25th to be included.
+        // So effectively < 2023-10-26 00:00:00 OR <= 2023-10-25 23:59:59.
+        // I will compare DATE(created_at) or simply assume the controller passes a full timestamp or we cast here.
+        // Simplest: `AND created_at <= $param` and let controller/frontend handle exact timing, 
+        // OR better: `AND created_at::date <= $param::date` for intuitive matching.
+        whereClause += ` AND created_at::date <= $${paramIndex}::date`;
+        params.push(endDate);
+        paramIndex++;
+    }
+
+    // Need to clean up params logic for LIMIT/OFFSET which must comes last in SQL but variables depend on order.
+    // Easier to construct the full query first.
+
+    const totalQuery = `SELECT COUNT(*) FROM orders ${whereClause}`;
+    // Params for count query are just the filter params (userId, start, end)
+    const totalResult = await db.query(totalQuery, params);
     const total = parseInt(totalResult.rows[0].count, 10);
 
     const ordersQuery = `
@@ -193,20 +234,32 @@ const getOrdersByUserId = async (userId, page, limit) => {
             ) as feedback
         FROM orders o
         JOIN users u ON o.user_id = u.id
-        WHERE o.user_id = $1
+        ${whereClause}
         ORDER BY o.created_at DESC
-        LIMIT $2 OFFSET $3;
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
     `;
-    const { rows: orders } = await db.query(ordersQuery, [userId, limit, offset]);
+
+    // Add pagination params to the end
+    const queryParams = [...params, limit, offset];
+
+    const { rows: orders } = await db.query(ordersQuery, queryParams);
 
     return { orders: orders.map(parseOrder), total };
 };
 
-const getAllOrders = async (page, limit) => {
+const getAllOrders = async (page = 1, limit = 10, status = null) => {
     const offset = (page - 1) * limit;
+    const params = [limit, offset];
 
-    const totalQuery = 'SELECT COUNT(*) FROM orders';
-    const totalResult = await db.query(totalQuery);
+    let whereClause = 'WHERE (o.is_scheduled = false OR o.scheduled_for_date <= CURRENT_DATE)';
+
+    if (status && status !== 'All') {
+        whereClause += ` AND o.status = $3`;
+        params.push(status);
+    }
+
+    const totalQuery = `SELECT COUNT(*) FROM orders o ${whereClause}`;
+    const totalResult = await db.query(totalQuery, status && status !== 'All' ? [status] : []);
     const total = parseInt(totalResult.rows[0].count, 10);
 
     const ordersQuery = `
@@ -225,10 +278,11 @@ const getAllOrders = async (page, limit) => {
             ) as feedback
         FROM orders o
         JOIN users u ON o.user_id = u.id
+        ${whereClause}
         ORDER BY o.created_at DESC
         LIMIT $1 OFFSET $2;
     `;
-    const { rows: orders } = await db.query(ordersQuery, [limit, offset]);
+    const { rows: orders } = await db.query(ordersQuery, params);
 
     return { orders: orders.map(parseOrder), total };
 };
@@ -254,12 +308,26 @@ const cancelOrder = async (orderId, user) => {
         throw new Error('Order not found.');
     }
 
-    if (user.role !== 'admin' && order.user_id !== user.userId) {
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+    const isAdminCreatedOrder = order.created_by_admin && order.created_by_admin !== order.user_id;
+
+    if (!isAdmin && order.user_id !== user.id) {
         throw new Error('You are not authorized to cancel this order.');
     }
 
-    if (user.role !== 'admin') {
-        if (order.status !== ORDER_STATUS.PENDING) {
+    // For admin-created orders: user (non-admin) can cancel within 24 hours
+    if (isAdminCreatedOrder && !isAdmin) {
+        const orderCreationTime = new Date(order.created_at).getTime();
+        const currentTime = new Date().getTime();
+        const timeDifferenceInHours = (currentTime - orderCreationTime) / (1000 * 60 * 60);
+
+        if (timeDifferenceInHours > 24) {
+            throw new Error('Cancellation window has expired. Admin-created orders can only be cancelled within 24 hours.');
+        }
+        // Allow cancellation for admin orders within 24h regardless of status (except settled/cancelled)
+    } else if (!isAdmin) {
+        // Regular order: 60 second window
+        if (order.status !== ORDER_STATUS.PENDING && order.status !== ORDER_STATUS.CONFIRMED) {
             throw new Error(`Order cannot be cancelled. Status is '${order.status}'.`);
         }
 
@@ -293,6 +361,17 @@ const disputeOrder = async (orderId, userId) => {
 
     if (![ORDER_STATUS.PENDING, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERED].includes(order.status)) {
         throw new Error(`Orders with status '${order.status}' cannot be disputed.`);
+    }
+
+    // For admin-created orders: user can only dispute within 24 hours
+    if (order.created_by_admin && order.created_by_admin !== userId) {
+        const orderCreationTime = new Date(order.created_at).getTime();
+        const currentTime = new Date().getTime();
+        const timeDifferenceInHours = (currentTime - orderCreationTime) / (1000 * 60 * 60);
+
+        if (timeDifferenceInHours > 24) {
+            throw new Error('Dispute window has expired. Admin-created orders can only be disputed within 24 hours.');
+        }
     }
 
     const { rows: [updatedOrder] } = await db.query(
@@ -338,6 +417,40 @@ const settleUserOrders = async (userId) => {
     return { settled_count: rowCount };
 };
 
+/**
+ * Get aggregated item summary for a specific date
+ * @param {string} date - YYYY-MM-DD
+ * @returns {Promise<Array>}
+ */
+const getDailyItemSummary = async (date) => {
+    // If no date provided, default to today
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    const { rows } = await db.query(
+        `SELECT 
+            oi.name_at_order,
+            oi.proportion_name,
+            SUM(CASE WHEN o.status IN ('${ORDER_STATUS.PENDING}', '${ORDER_STATUS.CONFIRMED}') THEN oi.quantity ELSE 0 END) as pending_qty,
+            SUM(CASE WHEN o.status = '${ORDER_STATUS.DELIVERED}' THEN oi.quantity ELSE 0 END) as delivered_qty,
+            SUM(CASE WHEN o.status = '${ORDER_STATUS.SETTLED}' THEN oi.quantity ELSE 0 END) as settled_qty,
+            SUM(oi.quantity) as total_quantity
+         FROM order_items oi
+         JOIN orders o ON oi.order_id = o.id
+         WHERE 
+            (
+                (o.is_scheduled = true AND o.scheduled_for_date = $1)
+                OR 
+                (o.is_scheduled = false AND DATE(o.created_at) = $1)
+            )
+            AND o.status NOT IN ('${ORDER_STATUS.CANCELLED}')
+         GROUP BY oi.name_at_order, oi.proportion_name
+         ORDER BY oi.name_at_order`,
+        [targetDate]
+    );
+
+    return rows;
+};
+
 module.exports = {
     createOrder,
     getOrderById,
@@ -348,4 +461,5 @@ module.exports = {
     disputeOrder,
     addFeedbackToOrder,
     settleUserOrders,
+    getDailyItemSummary
 };

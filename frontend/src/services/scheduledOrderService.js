@@ -37,9 +37,9 @@ export const createScheduledOrder = async (items, startDate, endDate, comment = 
  * Get scheduled orders for the current user
  * @param {boolean} includeCompleted
  */
-export const getMyScheduledOrders = async (includeCompleted = false) => {
+export const getMyScheduledOrders = async (includeCompleted = false, page = 1, limit = 10, startDate, endDate) => {
     const response = await api.get('/scheduled-orders', {
-        params: { includeCompleted }
+        params: { includeCompleted, page, limit, startDate, endDate }
     });
     return response.data;
 };
@@ -65,11 +65,21 @@ export const cancelScheduledOrder = async (orderId) => {
     return response.data;
 };
 
+/**
+ * Bulk cancel scheduled orders
+ * @param {Array} orderIds
+ */
+export const bulkCancelScheduledOrders = async (orderIds) => {
+    const response = await api.post('/scheduled-orders/bulk-cancel', { orderIds });
+    return response.data;
+};
+
 export default {
     getSchedulingConstraints,
     getSchedulableItems,
     createScheduledOrder,
     getMyScheduledOrders,
     getAllScheduledOrders,
-    cancelScheduledOrder
+    cancelScheduledOrder,
+    bulkCancelScheduledOrders
 };

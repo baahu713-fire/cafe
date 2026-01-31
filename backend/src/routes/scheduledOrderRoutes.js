@@ -38,6 +38,14 @@ router.get('/', authMiddleware, scheduledOrderController.getMyScheduledOrders);
  */
 router.post('/', authMiddleware, scheduledOrderController.createScheduledOrder);
 
+
+/**
+ * @route   POST /api/scheduled-orders/bulk-cancel
+ * @desc    Bulk cancel scheduled orders
+ * @access  Authenticated
+ */
+router.post('/bulk-cancel', authMiddleware, scheduledOrderController.cancelBulkScheduledOrders);
+
 /**
  * @route   DELETE /api/scheduled-orders/:id
  * @desc    Cancel a scheduled order (admin only)
