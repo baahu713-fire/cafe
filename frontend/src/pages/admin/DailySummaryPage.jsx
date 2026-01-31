@@ -8,7 +8,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import { Print, Refresh, Restaurant, PendingActions, LocalShipping, CheckCircle } from '@mui/icons-material';
+import { Print, Refresh, Restaurant, PendingActions, LocalShipping, CheckCircle, CurrencyRupee } from '@mui/icons-material';
 import api from '../../services/api';
 
 // Print-specific styles
@@ -108,11 +108,22 @@ const DailySummaryPage = () => {
             pending: acc.pending + parseInt(item.pending_qty || 0),
             delivered: acc.delivered + parseInt(item.delivered_qty || 0),
             settled: acc.settled + parseInt(item.settled_qty || 0),
-            total: acc.total + parseInt(item.total_quantity || 0)
-        }), { pending: 0, delivered: 0, settled: 0, total: 0 });
+            total: acc.total + parseInt(item.total_quantity || 0),
+            paidAmount: acc.paidAmount + parseFloat(item.paid_amount || 0),
+            saleAmount: acc.saleAmount + parseFloat(item.sale_amount || 0)
+        }), { pending: 0, delivered: 0, settled: 0, total: 0, paidAmount: 0, saleAmount: 0 });
     };
 
     const totals = getTotals();
+
+    // Format currency
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 2
+        }).format(amount);
+    };
 
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -206,31 +217,51 @@ const DailySummaryPage = () => {
                                 </CardContent>
                             </Card>
                         </Grid>
+                        <Grid item xs={6} sm={2.4}>
+                            <Card sx={{ bgcolor: 'success.dark', color: 'success.contrastText' }}>
+                                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                                    <CurrencyRupee sx={{ fontSize: 32 }} />
+                                    <Typography variant="h5">{formatCurrency(totals.paidAmount)}</Typography>
+                                    <Typography variant="body2">Total Paid</Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                        <Grid item xs={6} sm={2.4}>
+                            <Card sx={{ bgcolor: 'secondary.light', color: 'secondary.contrastText' }}>
+                                <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                                    <CurrencyRupee sx={{ fontSize: 32 }} />
+                                    <Typography variant="h5">{formatCurrency(totals.saleAmount)}</Typography>
+                                    <Typography variant="body2">Total Sale</Typography>
+                                </CardContent>
+                            </Card>
+                        </Grid>
                     </Grid>
                 )}
 
                 <TableContainer component={Paper} elevation={3}>
-                    <Table>
+                    <Table size="small">
                         <TableHead sx={{ bgcolor: '#eeeeee' }}>
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 'bold' }}>Item Name</TableCell>
-                                <TableCell sx={{ fontWeight: 'bold' }}>Variation / Portion</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold' }}>Portion</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>Price</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>Pending</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', color: 'info.dark' }}>Delivered</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', color: 'success.dark' }}>Settled</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', bgcolor: 'primary.light', color: 'primary.contrastText' }}>Total</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.dark' }}>Sale Amount</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                                         <CircularProgress />
                                     </TableCell>
                                 </TableRow>
                             ) : summaryItems.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                                         <Typography color="text.secondary">No orders found for this date.</Typography>
                                     </TableCell>
                                 </TableRow>
@@ -240,13 +271,14 @@ const DailySummaryPage = () => {
                                         <TableRow key={index} hover>
                                             <TableCell sx={{ fontWeight: 500 }}>{item.name_at_order}</TableCell>
                                             <TableCell>{item.proportion_name || '-'}</TableCell>
+                                            <TableCell align="right">₹{parseFloat(item.price_at_order || 0).toFixed(2)}</TableCell>
                                             <TableCell align="center">
                                                 {parseInt(item.pending_qty || 0) > 0 ? (
                                                     <Chip
                                                         label={item.pending_qty}
                                                         size="small"
                                                         color="warning"
-                                                        sx={{ minWidth: 50, fontWeight: 'bold' }}
+                                                        sx={{ minWidth: 40, fontWeight: 'bold' }}
                                                     />
                                                 ) : (
                                                     <Typography variant="body2" color="text.disabled">0</Typography>
@@ -258,7 +290,7 @@ const DailySummaryPage = () => {
                                                         label={item.delivered_qty}
                                                         size="small"
                                                         color="info"
-                                                        sx={{ minWidth: 50, fontWeight: 'bold' }}
+                                                        sx={{ minWidth: 40, fontWeight: 'bold' }}
                                                     />
                                                 ) : (
                                                     <Typography variant="body2" color="text.disabled">0</Typography>
@@ -270,7 +302,7 @@ const DailySummaryPage = () => {
                                                         label={item.settled_qty}
                                                         size="small"
                                                         color="success"
-                                                        sx={{ minWidth: 50, fontWeight: 'bold' }}
+                                                        sx={{ minWidth: 40, fontWeight: 'bold' }}
                                                     />
                                                 ) : (
                                                     <Typography variant="body2" color="text.disabled">0</Typography>
@@ -281,11 +313,14 @@ const DailySummaryPage = () => {
                                                     {item.total_quantity}
                                                 </Typography>
                                             </TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.dark', fontWeight: 'bold' }}>
+                                                {formatCurrency(parseFloat(item.sale_amount || 0))}
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                     {/* Totals Row */}
                                     <TableRow sx={{ bgcolor: 'grey.300' }}>
-                                        <TableCell colSpan={2} sx={{ fontWeight: 'bold' }}>TOTAL</TableCell>
+                                        <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>TOTAL</TableCell>
                                         <TableCell align="center">
                                             <Chip label={totals.pending} size="small" color="warning" sx={{ fontWeight: 'bold' }} />
                                         </TableCell>
@@ -298,6 +333,11 @@ const DailySummaryPage = () => {
                                         <TableCell align="center" sx={{ bgcolor: 'primary.main' }}>
                                             <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.contrastText' }}>
                                                 {totals.total}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell align="right" sx={{ bgcolor: 'success.light' }}>
+                                            <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.contrastText' }}>
+                                                {formatCurrency(totals.saleAmount)}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>

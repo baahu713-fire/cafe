@@ -430,10 +430,13 @@ const getDailyItemSummary = async (date) => {
         `SELECT 
             oi.name_at_order,
             oi.proportion_name,
+            oi.price_at_order,
             SUM(CASE WHEN o.status IN ('${ORDER_STATUS.PENDING}', '${ORDER_STATUS.CONFIRMED}') THEN oi.quantity ELSE 0 END) as pending_qty,
             SUM(CASE WHEN o.status = '${ORDER_STATUS.DELIVERED}' THEN oi.quantity ELSE 0 END) as delivered_qty,
             SUM(CASE WHEN o.status = '${ORDER_STATUS.SETTLED}' THEN oi.quantity ELSE 0 END) as settled_qty,
-            SUM(oi.quantity) as total_quantity
+            SUM(oi.quantity) as total_quantity,
+            SUM(CASE WHEN o.status = '${ORDER_STATUS.SETTLED}' THEN oi.quantity * oi.price_at_order ELSE 0 END) as paid_amount,
+            SUM(CASE WHEN o.status IN ('${ORDER_STATUS.DELIVERED}', '${ORDER_STATUS.SETTLED}') THEN oi.quantity * oi.price_at_order ELSE 0 END) as sale_amount
          FROM order_items oi
          JOIN orders o ON oi.order_id = o.id
          WHERE 
@@ -443,7 +446,7 @@ const getDailyItemSummary = async (date) => {
                 (o.is_scheduled = false AND DATE(o.created_at) = $1)
             )
             AND o.status NOT IN ('${ORDER_STATUS.CANCELLED}')
-         GROUP BY oi.name_at_order, oi.proportion_name
+         GROUP BY oi.name_at_order, oi.proportion_name, oi.price_at_order
          ORDER BY oi.name_at_order`,
         [targetDate]
     );
