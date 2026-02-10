@@ -51,6 +51,8 @@ const ScheduledOrdersPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [initLoading, setInitLoading] = useState(true);
+    const [initError, setInitError] = useState('');
 
     // Pagination & Data
     const [orders, setOrders] = useState([]);
@@ -93,6 +95,8 @@ const ScheduledOrdersPage = () => {
     }, [page, rowsPerPage, filterStartDate, filterEndDate]);
 
     const loadInitializationData = async () => {
+        setInitLoading(true);
+        setInitError('');
         try {
             const [constraintsData, itemsData] = await Promise.all([
                 getSchedulingConstraints(),
@@ -102,6 +106,9 @@ const ScheduledOrdersPage = () => {
             setSchedulableData(itemsData);
         } catch (err) {
             console.error('Failed to load init data', err);
+            setInitError('Failed to load scheduling data. Please try again.');
+        } finally {
+            setInitLoading(false);
         }
     };
 
@@ -384,11 +391,25 @@ const ScheduledOrdersPage = () => {
                         variant="contained"
                         startIcon={<Add />}
                         onClick={handleOpenDialog}
-                        disabled={schedulableData.categories.length === 0 && schedulableData.items.length === 0}
+                        disabled={initLoading || (schedulableData.categories.length === 0 && schedulableData.items.length === 0)}
                     >
-                        New Schedule
+                        {initLoading ? 'Loading...' : 'New Schedule'}
                     </Button>
                 </Box>
+
+                {initError && (
+                    <Alert severity="error" sx={{ mb: 2 }} action={
+                        <Button color="inherit" size="small" onClick={loadInitializationData}>Retry</Button>
+                    }>
+                        {initError}
+                    </Alert>
+                )}
+
+                {!initLoading && !initError && schedulableData.categories.length === 0 && schedulableData.items.length === 0 && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        No items are available for scheduling. An admin needs to mark menu items as schedulable.
+                    </Alert>
+                )}
 
                 {/* Filters */}
                 <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
