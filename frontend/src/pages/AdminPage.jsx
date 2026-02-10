@@ -15,6 +15,7 @@ import ManageUsers from '../components/admin/ManageUsers';
 import CMCManagement from '../components/admin/CMCManagement';
 import DailySummaryPage from './admin/DailySummaryPage';
 import AdminBillsPage from './admin/AdminBillsPage';
+import CalendarManagementPage from './admin/CalendarManagementPage';
 import { useAuth } from '../contexts/AuthContext';
 
 function TabPanel(props) {
@@ -49,7 +50,8 @@ const AdminPage = () => {
     '/admin/settlement',
     '/admin/bills',
     '/admin/users',
-    '/admin/cmc'
+    '/admin/cmc',
+    '/admin/calendar'
   ];
 
   // Determine initial tab from URL
@@ -96,6 +98,7 @@ const AdminPage = () => {
             <Tab label="Generate Bills" />
             {isSuperAdmin && <Tab label="Manage Users" />}
             {isSuperAdmin && <Tab label="Manage CMC" />}
+            {isSuperAdmin && <Tab label="Holiday Calendar" />}
           </Tabs>
         </Box>
         <TabPanel value={value} index={0}>
@@ -121,6 +124,11 @@ const AdminPage = () => {
         {isSuperAdmin && (
           <TabPanel value={value} index={6}>
             <CMCManagement />
+          </TabPanel>
+        )}
+        {isSuperAdmin && (
+          <TabPanel value={value} index={7}>
+            <CalendarManagementPage />
           </TabPanel>
         )}
       </Box>

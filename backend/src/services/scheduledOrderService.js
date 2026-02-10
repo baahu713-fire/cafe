@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const ORDER_STATUS = require('../constants/orderStatus');
+const { getHolidaysByDateRange, isWeekend } = require('./calendarService');
 
 const calculateTotal = (items) => {
     return items.reduce((sum, item) => sum + (parseFloat(item.price_at_order) * item.quantity), 0);
@@ -189,12 +190,26 @@ const createScheduledOrder = async (userId, items, startDate, endDate, comment =
         const createdOrders = [];
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+        // Fetch holidays for the date range from calendar
+        const holidays = await getHolidaysByDateRange(startDate, endDate);
+        const holidayDates = new Set(holidays.map(h => {
+            const hd = new Date(h.holiday_date);
+            return `${hd.getFullYear()}-${String(hd.getMonth() + 1).padStart(2, '0')}-${String(hd.getDate()).padStart(2, '0')}`;
+        }));
+
         // 3. Iterate through each day in the range
         // Loop date
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            // Skip non-working days if necessary? (e.g. weekends) 
-            // Currently assuming cafe operates 7 days or items define their availability.
-            // If an item has NO day_of_week, it's available every day.
+            // Skip weekends (Saturday=6, Sunday=0) 
+            if (isWeekend(d)) {
+                continue;
+            }
+
+            // Skip holidays from calendar (use local date to avoid UTC timezone shift)
+            const currentDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (holidayDates.has(currentDateStr)) {
+                continue;
+            }
 
             const currentDayName = dayNames[d.getDay()];
             const dailyItemsToInsert = [];

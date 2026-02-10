@@ -231,6 +231,9 @@ const AppNav = () => {
                       {user.isSuperAdmin && (
                         <MenuItem onClick={() => handleAdminNavigate('/admin/cmc')}>Manage CMC</MenuItem>
                       )}
+                      {user.isSuperAdmin && (
+                        <MenuItem onClick={() => handleAdminNavigate('/admin/calendar')}>Holiday Calendar</MenuItem>
+                      )}
                     </Menu>
                   </>
                 )}

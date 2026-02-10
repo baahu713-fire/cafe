@@ -33,7 +33,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import { Schedule, Add, Remove, Info, Cancel as CancelIcon } from '@mui/icons-material';
+import { Schedule, Add, Remove, Info, Cancel as CancelIcon, EventBusy, CalendarMonth } from '@mui/icons-material';
 import {
     getSchedulingConstraints,
     getSchedulableItems,
@@ -41,6 +41,7 @@ import {
     getMyScheduledOrders,
     bulkCancelScheduledOrders
 } from '../services/scheduledOrderService';
+import { getPublicHolidays } from '../services/calendarService';
 import { useAuth } from '../contexts/AuthContext';
 import SchedulableItemCard from '../components/SchedulableItemCard';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -75,6 +76,10 @@ const ScheduledOrdersPage = () => {
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [itemSearch, setItemSearch] = useState('');
+
+    // Holiday data
+    const [holidayDates, setHolidayDates] = useState(new Set());
+    const [holidayNames, setHolidayNames] = useState(new Map());
 
     const [filterStartDate, setFilterStartDate] = useState(null);
     const [filterEndDate, setFilterEndDate] = useState(null);
@@ -187,6 +192,30 @@ const ScheduledOrdersPage = () => {
 
     // --- Dialog Handlers (Existing Logic) ---
 
+    // Fetch holidays for a year range (current + next year)
+    const fetchHolidaysForPicker = async () => {
+        try {
+            const currentYear = dayjs().year();
+            const [thisYear, nextYear] = await Promise.all([
+                getPublicHolidays(currentYear),
+                getPublicHolidays(currentYear + 1)
+            ]);
+            const allHolidays = [...(thisYear || []), ...(nextYear || [])];
+            const dateSet = new Set();
+            const nameMap = new Map();
+            allHolidays.forEach(h => {
+                const hd = new Date(h.holiday_date);
+                const dateStr = `${hd.getFullYear()}-${String(hd.getMonth() + 1).padStart(2, '0')}-${String(hd.getDate()).padStart(2, '0')}`;
+                dateSet.add(dateStr);
+                nameMap.set(dateStr, h.name);
+            });
+            setHolidayDates(dateSet);
+            setHolidayNames(nameMap);
+        } catch (err) {
+            console.error('Failed to load holidays for picker', err);
+        }
+    };
+
     const handleOpenDialog = () => {
         setDialogOpen(true);
         setDialogError('');
@@ -196,6 +225,7 @@ const ScheduledOrdersPage = () => {
         setEndDate(nextDay);
         setComment('');
         setItemSearch('');
+        fetchHolidaysForPicker();
     };
 
     const handleCloseDialog = () => {
@@ -263,6 +293,43 @@ const ScheduledOrdersPage = () => {
 
     const calculateTotal = () => selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const calculateMaxEndDate = () => startDate ? startDate.endOf('year') : dayjs().endOf('year');
+
+    // Should disable date on DatePicker (weekends + holidays)
+    const shouldDisableDate = (date) => {
+        const day = date.day(); // 0=Sun, 6=Sat
+        if (day === 0 || day === 6) return true;
+        const dateStr = date.format('YYYY-MM-DD');
+        return holidayDates.has(dateStr);
+    };
+
+    // Calculate working days summary between start and end date
+    const getWorkingDaysSummary = () => {
+        if (!startDate || !endDate) return null;
+        let totalDays = 0;
+        let weekends = 0;
+        let holidays = 0;
+        let workingDays = 0;
+        const holidayList = [];
+
+        for (let d = startDate; d.isBefore(endDate) || d.isSame(endDate, 'day'); d = d.add(1, 'day')) {
+            totalDays++;
+            const day = d.day();
+            if (day === 0 || day === 6) {
+                weekends++;
+            } else {
+                const dateStr = d.format('YYYY-MM-DD');
+                if (holidayDates.has(dateStr)) {
+                    holidays++;
+                    holidayList.push({ date: d.format('DD MMM'), name: holidayNames.get(dateStr) || 'Holiday' });
+                } else {
+                    workingDays++;
+                }
+            }
+        }
+        return { totalDays, weekends, holidays, workingDays, holidayList };
+    };
+
+    const workingSummary = getWorkingDaysSummary();
 
     const handleSubmit = async () => {
         if (selectedItems.length === 0) {
@@ -485,6 +552,7 @@ const ScheduledOrdersPage = () => {
                                     }}
                                     minDate={dayjs().add(1, 'day')}
                                     maxDate={constraints ? dayjs(constraints.maxStartDate) : undefined}
+                                    shouldDisableDate={shouldDisableDate}
                                     slotProps={{ textField: { fullWidth: true } }}
                                     format="DD/MM/YYYY"
                                 />
@@ -496,10 +564,50 @@ const ScheduledOrdersPage = () => {
                                     onChange={setEndDate}
                                     minDate={startDate}
                                     maxDate={calculateMaxEndDate()}
+                                    shouldDisableDate={shouldDisableDate}
                                     slotProps={{ textField: { fullWidth: true } }}
                                     format="DD/MM/YYYY"
                                 />
                             </Grid>
+
+                            {/* Working days summary */}
+                            {workingSummary && workingSummary.totalDays > 0 && (
+                                <Grid item xs={12}>
+                                    <Paper sx={{ p: 2, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200', borderRadius: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <CalendarMonth color="info" fontSize="small" />
+                                            <Typography variant="subtitle2" color="info.main" fontWeight={700}>
+                                                Scheduling Summary
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            📅 Orders will be created for <strong>{workingSummary.workingDays} working day{workingSummary.workingDays !== 1 ? 's' : ''}</strong>
+                                            {workingSummary.totalDays > 1 && ` out of ${workingSummary.totalDays} total days`}
+                                        </Typography>
+                                        {(workingSummary.weekends > 0 || workingSummary.holidays > 0) && (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                                Skipping: {workingSummary.weekends > 0 && `${workingSummary.weekends} weekend day${workingSummary.weekends !== 1 ? 's' : ''}`}
+                                                {workingSummary.weekends > 0 && workingSummary.holidays > 0 && ', '}
+                                                {workingSummary.holidays > 0 && `${workingSummary.holidays} holiday${workingSummary.holidays !== 1 ? 's' : ''}`}
+                                            </Typography>
+                                        )}
+                                        {workingSummary.holidayList.length > 0 && (
+                                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
+                                                {workingSummary.holidayList.map((h, i) => (
+                                                    <Chip
+                                                        key={i}
+                                                        icon={<EventBusy />}
+                                                        label={`${h.date} — ${h.name}`}
+                                                        size="small"
+                                                        color="warning"
+                                                        variant="outlined"
+                                                    />
+                                                ))}
+                                            </Box>
+                                        )}
+                                    </Paper>
+                                </Grid>
+                            )}
 
                             <Grid item xs={12}>
                                 <TextField
