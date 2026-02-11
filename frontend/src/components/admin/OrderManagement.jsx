@@ -241,7 +241,7 @@ const OrderManagement = () => {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <HoverAvatar
-                        src={`/api/users/${order.user_id}/photo`}
+                        src={order.user_photo_url}
                         alt={order.user_name}
                         name={order.user_name}
                         size={32}

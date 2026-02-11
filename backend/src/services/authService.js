@@ -32,7 +32,7 @@ const registerUser = async (userData) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userResult = await client.query(
-      'INSERT INTO users (name, username, hashed_password, team_id, photo) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, team_id, is_active',
+      'INSERT INTO users (name, username, hashed_password, team_id, photo) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, team_id, is_active, photo_url',
       [name, username, hashedPassword, team_id, photoBuffer]
     );
 
@@ -59,7 +59,10 @@ const registerUser = async (userData) => {
 
 const loginUser = async (credentials) => {
   const { username, password } = credentials;
-  const { rows } = await db.query('SELECT * FROM users WHERE username = $1 AND is_active = TRUE', [username]);
+  const { rows } = await db.query(
+    'SELECT id, name, username, role, team_id, is_active, hashed_password, photo_url FROM users WHERE username = $1 AND is_active = TRUE',
+    [username]
+  );
 
   if (rows.length === 0) {
     throw new Error('Invalid credentials or user not active.');

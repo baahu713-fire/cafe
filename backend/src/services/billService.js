@@ -113,7 +113,7 @@ const generateBillSummary = async (userId, startDate, endDate) => {
  */
 const getUserInfoForBill = async (userId) => {
     const { rows } = await db.query(
-        'SELECT id, name, username, team_id FROM users WHERE id = $1',
+        'SELECT id, name, username, team_id, photo_url FROM users WHERE id = $1',
         [userId]
     );
     if (rows.length === 0) {

@@ -172,7 +172,7 @@ const BillSummaryPage = () => {
                 <Box className="print-header" sx={{ display: 'none' }}>
                     {user && (
                         <Avatar
-                            src={`/api/users/${user.id}/photo`}
+                            src={user.photo_url}
                             alt={user.name || user.username}
                             className="print-header-avatar"
                             sx={{ width: 80, height: 80 }}
@@ -280,7 +280,7 @@ const BillSummaryPage = () => {
                         {/* User Info & Date Range - For screen display */}
                         <Paper elevation={2} sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar
-                                src={`/api/users/${billData.user.id}/photo`}
+                                src={billData.user.photo_url}
                                 alt={billData.user.name || billData.user.username}
                                 sx={{ width: 60, height: 60 }}
                             />

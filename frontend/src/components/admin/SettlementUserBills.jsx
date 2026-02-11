@@ -118,7 +118,7 @@ const UserManagement = () => {
                 <TableCell component="th" scope="row">
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <HoverAvatar
-                      src={`/api/users/${user.id}/photo`}
+                      src={user.photo_url}
                       alt={user.name || user.username}
                       name={user.name || user.username}
                       size={32}

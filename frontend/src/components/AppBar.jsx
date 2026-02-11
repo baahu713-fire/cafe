@@ -144,9 +144,9 @@ const AppNav = () => {
             aria-haspopup="true"
             color="inherit"
           >
-            {user.photo ? (
+            {user.photo_url ? (
               <HoverAvatar
-                src={`/api/users/${user.id}/photo`}
+                src={user.photo_url}
                 alt={user.username}
                 name={user.name || user.username}
                 size={40}
@@ -257,9 +257,9 @@ const AppNav = () => {
                     color="inherit"
                     sx={{ ml: 1 }}
                   >
-                    {user.photo ? (
+                    {user.photo_url ? (
                       <HoverAvatar
-                        src={`/api/users/${user.id}/photo`}
+                        src={user.photo_url}
                         alt={user.username}
                         name={user.name || user.username}
                         size={40}
