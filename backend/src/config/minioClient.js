@@ -108,8 +108,8 @@ const getMinioPublicUrl = () => {
     }
     const inProduction = fs.existsSync('/run/secrets/minio_root_user');
     if (inProduction) {
-        // In production, MinIO is accessed via the Docker host or reverse proxy
-        return `http://minio:9000`;
+        // Relative path — Nginx proxies /storage/* to minio:9000/cafe-images/*
+        return `/storage`;
     }
     const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
     const port = process.env.MINIO_PORT || '9000';

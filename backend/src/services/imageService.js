@@ -55,33 +55,42 @@ const deleteImage = async (imageUrl) => {
 
 /**
  * Get the public URL for an object in MinIO.
- * @param {string} objectName - The object path within the bucket
- * @returns {string} The full public URL
+ * - Production: /storage/menu-items/xxx.jpg (Nginx proxies /storage/ → minio:9000/cafe-images/)
+ * - Development: http://localhost:9000/cafe-images/menu-items/xxx.jpg
  */
 const getImageUrl = (objectName) => {
     const baseUrl = getMinioPublicUrl();
+    // If baseUrl is a relative path (e.g., /storage), Nginx already maps to the bucket
+    if (baseUrl.startsWith('/')) {
+        return `${baseUrl}/${objectName}`;
+    }
+    // Absolute URL (development) — include the bucket name
     return `${baseUrl}/${BUCKET_NAME}/${objectName}`;
 };
 
 /**
  * Extract the object name from a full MinIO URL.
- * @param {string} url - Full URL like http://host:9000/cafe-images/menu-items/1234.jpg
- * @returns {string|null} Object name like menu-items/1234.jpg
+ * Handles:
+ *   /storage/menu-items/1234.jpg → menu-items/1234.jpg
+ *   http://host:9000/cafe-images/menu-items/1234.jpg → menu-items/1234.jpg
  */
 const extractObjectName = (url) => {
     if (!url) return null;
 
-    // If it's already just an object name (no http), return as is
+    // Relative path from Nginx proxy: /storage/menu-items/1234.jpg
+    if (url.startsWith('/storage/')) {
+        return url.replace('/storage/', '');
+    }
+
+    // If it's already just an object name (no http, no /storage), return as is
     if (!url.startsWith('http')) return url;
 
     try {
         const urlObj = new URL(url);
-        // Remove leading slash and bucket name
         const pathParts = urlObj.pathname.split('/').filter(Boolean);
         if (pathParts.length >= 2 && pathParts[0] === BUCKET_NAME) {
             return pathParts.slice(1).join('/');
         }
-        // If bucket name is not in path, return full path without leading slash
         return pathParts.join('/');
     } catch {
         return null;
