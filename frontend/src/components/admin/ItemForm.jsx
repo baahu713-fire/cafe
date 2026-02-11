@@ -28,10 +28,11 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
     const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
-        if (currentItem?.image) {
+        if (currentItem?.image instanceof File) {
             setImagePreview(URL.createObjectURL(currentItem.image));
-        } else if (currentItem?.image_data) {
-            setImagePreview(currentItem.image_data);
+        } else if (currentItem?.image) {
+            // Existing MinIO URL
+            setImagePreview(currentItem.image);
         } else {
             setImagePreview(null);
         }
@@ -40,7 +41,7 @@ const ItemForm = ({ open, handleClose, currentItem, setCurrentItem, handleSave, 
     const handleImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setCurrentItem(prev => ({ ...prev, image: file, image_data: null }));
+            setCurrentItem(prev => ({ ...prev, image: file }));
         } else {
             setCurrentItem(prev => ({ ...prev, image: null }));
         }

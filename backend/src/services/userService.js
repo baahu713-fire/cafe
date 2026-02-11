@@ -23,7 +23,7 @@ const buildQuery = (baseQuery, page, limit, search, searchFields, isOrderQuery =
     const whereString = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const totalQuery = `SELECT COUNT(*) FROM ${isOrderQuery ? 'users u JOIN orders o ON u.id = o.user_id' : 'users'} ${whereString}`;
-    
+
     params.push(limit, offset);
     const limitOffsetString = `LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
@@ -35,7 +35,7 @@ const buildQuery = (baseQuery, page, limit, search, searchFields, isOrderQuery =
 const getAllUsers = async (page, limit, search = '') => {
     const baseQuery = 'SELECT id, username, role, created_at, is_active FROM users';
     const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['username']);
-    
+
     const totalResult = await db.query(totalQuery, params.slice(0, params.length - 2));
     const total = parseInt(totalResult.rows[0].count, 10);
 
@@ -45,7 +45,7 @@ const getAllUsers = async (page, limit, search = '') => {
 };
 
 const getAllUsersForSuperAdmin = async (search = '') => {
-    let query = 'SELECT u.id, u.name, u.username, u.role, u.is_active, t.name as team_name FROM users u LEFT JOIN teams t ON u.team_id = t.id';
+    let query = 'SELECT u.id, u.name, u.username, u.role, u.is_active, u.photo_url, t.name as team_name FROM users u LEFT JOIN teams t ON u.team_id = t.id';
     const params = [];
 
     if (search) {
@@ -73,7 +73,7 @@ const getUsersWithOrderStats = async (page, limit, search = '') => {
     `;
 
     const { totalQuery, mainQuery, params } = buildQuery(baseQuery, page, limit, search, ['u.username'], true);
-    
+
     const totalResult = await db.query(totalQuery, params.slice(0, params.length - 2));
     const total = parseInt(totalResult.rows[0].count, 10);
 
@@ -87,15 +87,15 @@ const getActiveUsers = async () => {
     return rows;
 };
 
-const getUserPhoto = async (userId) => {
-    const result = await db.query('SELECT photo FROM users WHERE id = $1', [userId]);
+const getUserPhotoUrl = async (userId) => {
+    const result = await db.query('SELECT photo_url FROM users WHERE id = $1', [userId]);
     if (result.rows.length > 0) {
-        return result.rows[0].photo;
+        return result.rows[0].photo_url;
     }
     return null;
 };
 
-const updateUserProfile = async (userId, { name, password, photo }) => {
+const updateUserProfile = async (userId, { name, password, photo_url }) => {
     const setClauses = [];
     const params = [userId];
 
@@ -110,16 +110,16 @@ const updateUserProfile = async (userId, { name, password, photo }) => {
         setClauses.push(`hashed_password = $${params.length}`);
     }
 
-    if (photo) {
-        params.push(photo);
-        setClauses.push(`photo = $${params.length}`);
+    if (photo_url) {
+        params.push(photo_url);
+        setClauses.push(`photo_url = $${params.length}`);
     }
 
     if (setClauses.length === 0) {
         throw new Error('No fields to update.');
     }
 
-    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, username, role, team_id, is_active`;
+    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, username, role, team_id, is_active, photo_url`;
 
     const { rows: [updatedUser] } = await db.query(query, params);
 
@@ -130,7 +130,7 @@ const updateUserProfile = async (userId, { name, password, photo }) => {
     return updatedUser;
 };
 
-const updateUserBySuperAdmin = async (userId, { name, photo, is_active }) => {
+const updateUserBySuperAdmin = async (userId, { name, photo_url, is_active }) => {
     const setClauses = [];
     const params = [userId];
 
@@ -139,21 +139,21 @@ const updateUserBySuperAdmin = async (userId, { name, photo, is_active }) => {
         setClauses.push(`name = $${params.length}`);
     }
 
-    if (photo) {
-        params.push(photo);
-        setClauses.push(`photo = $${params.length}`);
+    if (photo_url) {
+        params.push(photo_url);
+        setClauses.push(`photo_url = $${params.length}`);
     }
 
     if (is_active !== undefined) {
         params.push(is_active);
         setClauses.push(`is_active = $${params.length}`);
     }
-    
+
     if (setClauses.length === 0) {
         throw new Error('No fields to update.');
     }
 
-    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, username, role, is_active, (SELECT name FROM teams WHERE id = team_id) as team_name`;
+    const query = `UPDATE users SET ${setClauses.join(', ')} WHERE id = $1 RETURNING id, name, username, role, is_active, photo_url, (SELECT name FROM teams WHERE id = team_id) as team_name`;
 
     const { rows: [updatedUser] } = await db.query(query, params);
 
@@ -177,7 +177,7 @@ const changeUserPasswordBySuperAdmin = async (userId, newPassword) => {
 };
 
 const getUserProfile = async (userId) => {
-    const { rows } = await db.query('SELECT id, name, username, role, team_id, is_active FROM users WHERE id = $1', [userId]);
+    const { rows } = await db.query('SELECT id, name, username, role, team_id, is_active, photo_url FROM users WHERE id = $1', [userId]);
     if (rows.length === 0) {
         throw new Error('User not found');
     }
@@ -210,7 +210,7 @@ module.exports = {
     getAllUsersForSuperAdmin,
     getUsersWithOrderStats,
     getActiveUsers,
-    getUserPhoto,
+    getUserPhotoUrl,
     updateUserProfile,
     updateUserBySuperAdmin,
     changeUserPasswordBySuperAdmin,

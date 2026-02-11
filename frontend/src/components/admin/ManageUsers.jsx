@@ -128,7 +128,7 @@ const ManageUsers = () => {
                                     <TableRow key={u.id}>
                                         <TableCell>
                                             <HoverAvatar
-                                                src={`/api/users/${u.id}/photo`}
+                                                src={u.photo_url}
                                                 alt={u.name || u.username}
                                                 name={u.name || u.username}
                                                 size={40}

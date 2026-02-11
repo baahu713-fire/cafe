@@ -1,4 +1,5 @@
 const userService = require('../services/userService');
+const imageService = require('../services/imageService');
 
 const getUsers = async (req, res, next) => {
     try {
@@ -57,27 +58,12 @@ const getUserPhoto = async (req, res) => {
     }
 
     try {
-        const photo = await userService.getUserPhoto(userId);
-        if (photo) {
-            // Generate ETag based on photo content hash
-            const crypto = require('crypto');
-            const etag = crypto.createHash('md5').update(photo).digest('hex');
-
-            // Check if client has cached version
-            if (req.headers['if-none-match'] === etag) {
-                return res.status(304).send(); // Not Modified
-            }
-
-            // Set caching headers (cache for 1 hour, revalidate after)
-            res.set({
-                'Content-Type': 'image/jpeg',
-                'Cache-Control': 'private, max-age=3600, must-revalidate',
-                'ETag': etag
-            });
-            res.send(photo);
-        } else {
-            res.status(404).send('Photo not found.');
+        const photoUrl = await userService.getUserPhotoUrl(userId);
+        if (photoUrl) {
+            // Redirect to the MinIO URL
+            return res.redirect(photoUrl);
         }
+        res.status(404).send('Photo not found.');
     } catch (error) {
         console.error('Error fetching user photo:', error);
         res.status(500).send('Error fetching photo.');
@@ -86,12 +72,25 @@ const getUserPhoto = async (req, res) => {
 
 const updateUserProfile = async (req, res, next) => {
     try {
-        const userId = req.session.user.id; // Corrected
+        const userId = req.session.user.id;
         const { name, password } = req.body;
-        const photo = req.file ? req.file.buffer : null;
+        let photo_url = null;
 
-        const updatedUser = await userService.updateUserProfile(userId, { name, password, photo });
+        if (req.file) {
+            // Delete old photo if it exists
+            const currentProfile = await userService.getUserProfile(userId);
+            if (currentProfile.photo_url) {
+                await imageService.deleteImage(currentProfile.photo_url);
+            }
+            photo_url = await imageService.uploadImage(
+                req.file.buffer,
+                'users',
+                req.file.originalname,
+                req.file.mimetype
+            );
+        }
 
+        const updatedUser = await userService.updateUserProfile(userId, { name, password, photo_url });
         res.json(updatedUser);
     } catch (error) {
         next(error);
@@ -102,10 +101,23 @@ const updateUserBySuperAdmin = async (req, res, next) => {
     try {
         const { userId } = req.params;
         const { name, is_active } = req.body;
-        const photo = req.file ? req.file.buffer : null;
+        let photo_url = null;
 
-        const updatedUser = await userService.updateUserBySuperAdmin(userId, { name, photo, is_active });
+        if (req.file) {
+            // Delete old photo if it exists
+            const currentProfile = await userService.getUserProfile(userId);
+            if (currentProfile.photo_url) {
+                await imageService.deleteImage(currentProfile.photo_url);
+            }
+            photo_url = await imageService.uploadImage(
+                req.file.buffer,
+                'users',
+                req.file.originalname,
+                req.file.mimetype
+            );
+        }
 
+        const updatedUser = await userService.updateUserBySuperAdmin(userId, { name, photo_url, is_active });
         res.json(updatedUser);
     } catch (error) {
         next(error);
@@ -131,7 +143,7 @@ const changeUserPasswordBySuperAdmin = async (req, res, next) => {
 
 const getUserProfile = async (req, res, next) => {
     try {
-        const userId = req.session.user.id; // Corrected
+        const userId = req.session.user.id;
         const user = await userService.getUserProfile(userId);
         res.json(user);
     } catch (error) {

@@ -3,11 +3,13 @@ const db = require('../config/database');
 /**
  * Get menu items for the Menu page (public).
  * Only items where category is NULL or not in ('breakfast', 'lunch') are shown.
- * Breakfast/lunch items are daily specials only.
+ * Excludes image_data bytea column — images are served via MinIO URLs in the 'image' column.
  */
 const getAllMenuItems = async () => {
     const { rows } = await db.query(
-        `SELECT * FROM menu_items 
+        `SELECT id, name, description, price, image, availability, proportions, 
+                created_at, deleted_from, available, category, day_of_week, schedulable
+         FROM menu_items 
          WHERE deleted_from IS NULL 
          AND (category IS NULL OR category NOT IN ('breakfast', 'lunch'))
          ORDER BY name`
@@ -17,10 +19,13 @@ const getAllMenuItems = async () => {
 
 /**
  * Get ALL menu items for Admin page (no category filtering).
+ * Excludes image_data bytea column.
  */
 const getAllMenuItemsAdmin = async () => {
     const { rows } = await db.query(
-        `SELECT * FROM menu_items 
+        `SELECT id, name, description, price, image, availability, proportions, 
+                created_at, deleted_from, available, category, day_of_week, schedulable
+         FROM menu_items 
          WHERE deleted_from IS NULL 
          ORDER BY name`
     );
@@ -28,12 +33,25 @@ const getAllMenuItemsAdmin = async () => {
 };
 
 const getMenuItemsByCategory = async (category) => {
-    const { rows } = await db.query('SELECT * FROM menu_items WHERE $1 = ANY(availability) AND deleted_from IS NULL ORDER BY name', [category]);
+    const { rows } = await db.query(
+        `SELECT id, name, description, price, image, availability, proportions, 
+                created_at, deleted_from, available, category, day_of_week, schedulable
+         FROM menu_items 
+         WHERE $1 = ANY(availability) AND deleted_from IS NULL 
+         ORDER BY name`,
+        [category]
+    );
     return rows;
 };
 
 const getMenuItemById = async (itemId) => {
-    const { rows } = await db.query('SELECT * FROM menu_items WHERE id = $1 AND deleted_from IS NULL', [itemId]);
+    const { rows } = await db.query(
+        `SELECT id, name, description, price, image, availability, proportions, 
+                created_at, deleted_from, available, category, day_of_week, schedulable
+         FROM menu_items 
+         WHERE id = $1 AND deleted_from IS NULL`,
+        [itemId]
+    );
     if (rows.length === 0) {
         throw new Error('Menu item not found');
     }
@@ -41,7 +59,7 @@ const getMenuItemById = async (itemId) => {
 };
 
 const createMenuItem = async (itemData) => {
-    const { name, description, price, image_data, availability, proportions, available, category, day_of_week, schedulable } = itemData;
+    const { name, description, price, image, availability, proportions, available, category, day_of_week, schedulable } = itemData;
 
     const { rows: existing } = await db.query('SELECT id FROM menu_items WHERE name = $1 AND deleted_from IS NULL', [name]);
     if (existing.length > 0) {
@@ -49,14 +67,14 @@ const createMenuItem = async (itemData) => {
     }
 
     const { rows } = await db.query(
-        'INSERT INTO menu_items (name, description, price, image_data, availability, proportions, available, category, day_of_week, schedulable) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-        [name, description, price, image_data, availability, JSON.stringify(proportions), available, category || null, day_of_week || null, schedulable || false]
+        'INSERT INTO menu_items (name, description, price, image, availability, proportions, available, category, day_of_week, schedulable) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+        [name, description, price, image || null, availability, JSON.stringify(proportions), available, category || null, day_of_week || null, schedulable || false]
     );
     return rows[0];
 };
 
 const updateMenuItem = async (itemId, itemData) => {
-    const { name, description, price, image_data, availability, proportions, available, category, day_of_week, schedulable } = itemData;
+    const { name, description, price, image, availability, proportions, available, category, day_of_week, schedulable } = itemData;
 
     // Cast itemId to integer for proper comparison
     const id = parseInt(itemId, 10);
@@ -92,9 +110,9 @@ const updateMenuItem = async (itemId, itemData) => {
             schedulable = $9
     `;
 
-    if (image_data) {
-        updateQuery += ', image_data = $10';
-        queryParams.push(image_data);
+    if (image) {
+        updateQuery += ', image = $10';
+        queryParams.push(image);
         queryParams.push(id);
         updateQuery += ' WHERE id = $11 RETURNING *';
     } else {

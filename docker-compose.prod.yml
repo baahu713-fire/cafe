@@ -12,7 +12,10 @@ secrets:
     external: true
   redis_password:
     external: true
-
+  minio_root_user:
+    external: true
+  minio_root_password:
+    external: true
 
 services:
   backend:
@@ -26,7 +29,7 @@ services:
       - cafe_network
     # Swarm deployment configuration
     deploy:
-      replicas: 4  # Run 4 instances for load balancing
+      replicas: 4 # Run 4 instances for load balancing
       resources:
         limits:
           cpus: '0.50'
@@ -45,7 +48,7 @@ services:
         failure_action: rollback
     # Health check for Swarm
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/menu"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/menu" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,11 +63,14 @@ services:
       - db_name
       - redis_user
       - redis_password
+      - minio_root_user
+      - minio_root_password
     depends_on:
       - redis
+      - minio
     environment:
       - REDIS_URL=redis://redis:6379
-
+      - MINIO_PUBLIC_URL=http://minio:9000
 
   frontend:
     build:
@@ -83,24 +89,52 @@ services:
 
   redis:
     image: redis:latest
-    #command: redis-server --requirepass-file /run/secrets/redis_password
     environment:
       - REDIS_ARGS=--requirepass-file /run/secrets/redis_password
-
     secrets:
       - redis_password
     volumes:
-      - redis_data:/data
+      - /storage/cafe-data/redis:/data
     networks:
       - cafe_network
     ports:
       - "6379:6379"
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - cafe_network
+    volumes:
+      - /storage/cafe-data/minio:/data
+    secrets:
+      - minio_root_user
+      - minio_root_password
+    environment:
+      - MINIO_ROOT_USER_FILE=/run/secrets/minio_root_user
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_root_password
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 networks:
   cafe_network:
     driver: overlay
-
-
-volumes:
-  redis_data:

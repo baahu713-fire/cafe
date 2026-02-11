@@ -85,7 +85,7 @@ const CMCManagement = () => {
                 address: member.address || '',
                 display_order: member.display_order || 0
             });
-            setPhotoPreview(member.photo || null);
+            setPhotoPreview(member.photo_url || null);
         } else {
             setCurrentMember(null);
             setFormData({
@@ -243,9 +243,9 @@ const CMCManagement = () => {
                                 <TableRow key={member.id}>
                                     <TableCell>{member.display_order}</TableCell>
                                     <TableCell>
-                                        {member.photo ? (
+                                        {member.photo_url ? (
                                             <HoverAvatar
-                                                src={member.photo}
+                                                src={member.photo_url}
                                                 alt={member.name}
                                                 name={member.name}
                                                 size={40}

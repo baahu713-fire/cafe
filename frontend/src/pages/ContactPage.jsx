@@ -49,11 +49,12 @@ const MemberCard = ({ member }) => (
                 justifyContent: 'center'
             }}
         >
-            {member.photo ? (
+            {member.photo_url ? (
                 <CardMedia
                     component="img"
-                    image={member.photo}
+                    image={member.photo_url}
                     alt={member.name}
+                    loading="lazy"
                     sx={{
                         width: 140,
                         height: 140,

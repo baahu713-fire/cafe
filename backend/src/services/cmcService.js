@@ -1,91 +1,58 @@
 const db = require('../config/database');
 
 /**
- * Get all active CMC members ordered by display_order
+ * Get all CMC members. Uses photo_url instead of photo bytea.
  */
 const getAllMembers = async () => {
-    const query = `
-        SELECT id, name, designation, phone, address, photo, display_order 
-        FROM cmc_members 
-        WHERE is_active = true 
-        ORDER BY display_order ASC
-    `;
-    const { rows } = await db.query(query);
+    const { rows } = await db.query(
+        'SELECT id, name, designation, phone, address, photo_url, display_order, is_active, created_at FROM cmc_members ORDER BY display_order ASC, created_at ASC'
+    );
     return rows;
 };
 
-/**
- * Get a single CMC member by ID
- */
 const getMemberById = async (id) => {
     const { rows } = await db.query(
-        'SELECT id, name, designation, phone, address, photo FROM cmc_members WHERE id = $1 AND is_active = true',
+        'SELECT id, name, designation, phone, address, photo_url, display_order, is_active, created_at FROM cmc_members WHERE id = $1',
         [id]
     );
-    if (rows.length === 0) {
-        throw new Error('CMC member not found');
-    }
-    return rows[0];
+    return rows[0] || null;
 };
 
-/**
- * Create a new CMC member
- */
-const createMember = async (memberData) => {
-    const { name, designation, phone, address, photo, display_order } = memberData;
+const createMember = async ({ name, designation, phone, address, photo_url, display_order }) => {
     const { rows } = await db.query(
-        `INSERT INTO cmc_members (name, designation, phone, address, photo, display_order) 
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [name, designation, phone, address, photo, display_order || 0]
+        'INSERT INTO cmc_members (name, designation, phone, address, photo_url, display_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [name, designation, phone, address, photo_url || null, display_order || 0]
     );
     return rows[0];
 };
 
-/**
- * Update a CMC member
- */
-const updateMember = async (id, memberData) => {
-    const { name, designation, phone, address, photo, display_order } = memberData;
+const updateMember = async (id, { name, designation, phone, address, photo_url, display_order }) => {
+    const setClauses = ['name = $2', 'designation = $3', 'phone = $4', 'address = $5'];
+    const params = [id, name, designation, phone, address];
 
-    let query, params;
-
-    if (photo) {
-        query = `
-            UPDATE cmc_members 
-            SET name = $1, designation = $2, phone = $3, address = $4, photo = $5, display_order = $6
-            WHERE id = $7 AND is_active = true 
-            RETURNING *
-        `;
-        params = [name, designation, phone, address, photo, display_order || 0, id];
-    } else {
-        query = `
-            UPDATE cmc_members 
-            SET name = $1, designation = $2, phone = $3, address = $4, display_order = $5
-            WHERE id = $6 AND is_active = true 
-            RETURNING *
-        `;
-        params = [name, designation, phone, address, display_order || 0, id];
+    if (photo_url) {
+        params.push(photo_url);
+        setClauses.push(`photo_url = $${params.length}`);
     }
 
-    const { rows } = await db.query(query, params);
-    if (rows.length === 0) {
-        throw new Error('CMC member not found');
+    if (display_order !== undefined) {
+        params.push(display_order);
+        setClauses.push(`display_order = $${params.length}`);
     }
-    return rows[0];
+
+    const { rows } = await db.query(
+        `UPDATE cmc_members SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING *`,
+        params
+    );
+    return rows[0] || null;
 };
 
-/**
- * Soft delete a CMC member (set is_active to false)
- */
 const deleteMember = async (id) => {
     const { rows } = await db.query(
-        'UPDATE cmc_members SET is_active = false WHERE id = $1 RETURNING id',
+        'DELETE FROM cmc_members WHERE id = $1 RETURNING id',
         [id]
     );
-    if (rows.length === 0) {
-        throw new Error('CMC member not found');
-    }
-    return { message: 'CMC member deleted successfully' };
+    return rows[0] || null;
 };
 
 module.exports = {
@@ -93,5 +60,5 @@ module.exports = {
     getMemberById,
     createMember,
     updateMember,
-    deleteMember
+    deleteMember,
 };

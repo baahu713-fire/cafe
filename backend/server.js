@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const compression = require('compression');
 const { getRedisClient } = require('./src/config/redis');
+const { ensureBucket } = require('./src/config/minioClient');
 const { UPLOAD_LIMITS } = require('./src/constants/uploadLimits');
 
 // Import routes
@@ -124,6 +125,15 @@ const startServer = async () => {
       throw new Error("Failed to connect to Redis. Application cannot start.");
     }
     console.log("Redis client obtained successfully. Configuring session store...");
+
+    // Initialize MinIO bucket
+    try {
+      await ensureBucket();
+      console.log("MinIO bucket initialized successfully.");
+    } catch (minioErr) {
+      console.warn("MinIO initialization failed:", minioErr.message);
+      console.warn("Image upload/serving may not work until MinIO is available.");
+    }
 
     // Use a variable to hold the imported module
     let RedisStore;

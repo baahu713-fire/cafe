@@ -68,7 +68,7 @@ const MenuManagement = () => { // Remove user prop
 
             setCurrentItem({ ...item, proportions, availability, image: null, category: item.category || '', day_of_week: item.day_of_week || '', schedulable: item.schedulable || false });
         } else {
-            setCurrentItem({ name: '', price: '', image: null, image_data: null, description: '', availability: [], proportions: [], available: true, category: '', day_of_week: '', schedulable: false });
+            setCurrentItem({ name: '', price: '', image: null, description: '', availability: [], proportions: [], available: true, category: '', day_of_week: '', schedulable: false });
         }
         setFormOpen(true);
     };
@@ -195,7 +195,7 @@ const MenuManagement = () => { // Remove user prop
                     <TableBody>
                         {filteredMenu.map(item => (
                             <TableRow key={item.id}>
-                                <TableCell><img src={item.image_data} alt={item.name} height="50" /></TableCell>
+                                <TableCell>{item.image ? <img src={item.image} alt={item.name} height="50" loading="lazy" /> : '-'}</TableCell>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell>₹{item.price}</TableCell>
                                 <TableCell>{Array.isArray(item.availability) ? item.availability.join(', ') : (item.availability || 'N/A')}</TableCell>

@@ -1,15 +1,10 @@
 const menuService = require('../services/menuService');
+const imageService = require('../services/imageService');
 
 const getAllItems = async (req, res) => {
   try {
     const items = await menuService.getAllMenuItems();
-    const itemsWithImages = items.map(item => {
-      if (item.image_data) {
-        item.image_data = `data:image/jpeg;base64,${Buffer.from(item.image_data).toString('base64')}`;
-      }
-      return item;
-    });
-    res.json(itemsWithImages);
+    res.json(items);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -21,13 +16,7 @@ const getAllItems = async (req, res) => {
 const getAllItemsAdmin = async (req, res) => {
   try {
     const items = await menuService.getAllMenuItemsAdmin();
-    const itemsWithImages = items.map(item => {
-      if (item.image_data) {
-        item.image_data = `data:image/jpeg;base64,${Buffer.from(item.image_data).toString('base64')}`;
-      }
-      return item;
-    });
-    res.json(itemsWithImages);
+    res.json(items);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -36,13 +25,7 @@ const getAllItemsAdmin = async (req, res) => {
 const getItemsByCategory = async (req, res) => {
   try {
     const items = await menuService.getMenuItemsByCategory(req.params.category);
-    const itemsWithImages = items.map(item => {
-      if (item.image_data) {
-        item.image_data = `data:image/jpeg;base64,${Buffer.from(item.image_data).toString('base64')}`;
-      }
-      return item;
-    });
-    res.json(itemsWithImages);
+    res.json(items);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -51,9 +34,6 @@ const getItemsByCategory = async (req, res) => {
 const getItemById = async (req, res) => {
   try {
     const item = await menuService.getMenuItemById(req.params.id);
-    if (item.image_data) {
-      item.image_data = `data:image/jpeg;base64,${Buffer.from(item.image_data).toString('base64')}`;
-    }
     res.json(item);
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -63,9 +43,18 @@ const getItemById = async (req, res) => {
 const createItem = async (req, res) => {
   try {
     const itemData = req.body;
+
+    // Upload image to MinIO if provided
     if (req.file) {
-      itemData.image_data = req.file.buffer;
+      const imageUrl = await imageService.uploadImage(
+        req.file.buffer,
+        'menu-items',
+        req.file.originalname,
+        req.file.mimetype
+      );
+      itemData.image = imageUrl;
     }
+
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
     }
@@ -92,9 +81,24 @@ const createItem = async (req, res) => {
 const updateItem = async (req, res) => {
   try {
     const itemData = req.body;
+
+    // Upload new image to MinIO if provided
     if (req.file) {
-      itemData.image_data = req.file.buffer;
+      // Delete old image if it exists
+      const existingItem = await menuService.getMenuItemById(req.params.id);
+      if (existingItem.image) {
+        await imageService.deleteImage(existingItem.image);
+      }
+
+      const imageUrl = await imageService.uploadImage(
+        req.file.buffer,
+        'menu-items',
+        req.file.originalname,
+        req.file.mimetype
+      );
+      itemData.image = imageUrl;
     }
+
     if (itemData.proportions && typeof itemData.proportions === 'string') {
       itemData.proportions = JSON.parse(itemData.proportions);
     }

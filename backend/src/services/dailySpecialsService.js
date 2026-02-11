@@ -3,11 +3,14 @@ const { DAYS_OF_WEEK, WORKING_DAYS, DAILY_SPECIAL_CATEGORIES } = require('../con
 
 /**
  * Fetches all daily special items from menu_items for the full week.
+ * Excludes image_data bytea column — images are served via MinIO URLs in the 'image' column.
  * @returns {Object} Weekly menu organized by day and category.
  */
 const getWeeklySpecials = async () => {
     const query = `
-        SELECT * FROM menu_items 
+        SELECT id, name, description, price, image, availability, proportions, 
+               created_at, deleted_from, available, category, day_of_week, schedulable
+        FROM menu_items 
         WHERE category IS NOT NULL 
         AND available = true 
         AND deleted_from IS NULL
@@ -25,8 +28,6 @@ const getWeeklySpecials = async () => {
     });
 
     rows.forEach(item => {
-        // If day_of_week is NULL, it's an everyday item -> add to all days
-        // If day_of_week matches a day, add to that day only
         if (!item.day_of_week) {
             WORKING_DAYS.forEach(day => {
                 if (weeklyMenu[day][item.category]) {
@@ -52,7 +53,9 @@ const getTodaySpecials = async () => {
     const currentDay = DAYS_OF_WEEK[today.getDay()];
 
     const query = `
-        SELECT * FROM menu_items 
+        SELECT id, name, description, price, image, availability, proportions, 
+               created_at, deleted_from, available, category, day_of_week, schedulable
+        FROM menu_items 
         WHERE category IS NOT NULL 
         AND available = true 
         AND deleted_from IS NULL

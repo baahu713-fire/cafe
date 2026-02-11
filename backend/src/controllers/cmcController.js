@@ -1,93 +1,94 @@
 const cmcService = require('../services/cmcService');
+const imageService = require('../services/imageService');
 
-/**
- * Get all CMC members
- */
 const getAllMembers = async (req, res) => {
     try {
         const members = await cmcService.getAllMembers();
-
-        // Convert photo binary to base64 for frontend
-        const membersWithPhotos = members.map(member => {
-            if (member.photo) {
-                member.photo = `data:image/jpeg;base64,${Buffer.from(member.photo).toString('base64')}`;
-            }
-            return member;
-        });
-
-        res.json(membersWithPhotos);
+        // No more base64 conversion — photo_url is already a URL string
+        res.json(members);
     } catch (error) {
-        console.error('Error fetching CMC members:', error);
-        res.status(500).json({ error: 'Failed to fetch CMC members' });
+        res.status(500).json({ message: error.message });
     }
 };
 
-/**
- * Get a single CMC member by ID
- */
 const getMemberById = async (req, res) => {
     try {
         const member = await cmcService.getMemberById(req.params.id);
-
-        if (member.photo) {
-            member.photo = `data:image/jpeg;base64,${Buffer.from(member.photo).toString('base64')}`;
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
         }
-
         res.json(member);
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
-/**
- * Create a new CMC member (Admin only)
- */
 const createMember = async (req, res) => {
     try {
         const memberData = req.body;
+
         if (req.file) {
-            memberData.photo = req.file.buffer;
+            const photoUrl = await imageService.uploadImage(
+                req.file.buffer,
+                'cmc-members',
+                req.file.originalname,
+                req.file.mimetype
+            );
+            memberData.photo_url = photoUrl;
         }
 
         const newMember = await cmcService.createMember(memberData);
         res.status(201).json(newMember);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
-/**
- * Update a CMC member (Admin only)
- */
 const updateMember = async (req, res) => {
     try {
         const memberData = req.body;
+
         if (req.file) {
-            memberData.photo = req.file.buffer;
+            // Delete old photo if exists
+            const existingMember = await cmcService.getMemberById(req.params.id);
+            if (existingMember && existingMember.photo_url) {
+                await imageService.deleteImage(existingMember.photo_url);
+            }
+
+            const photoUrl = await imageService.uploadImage(
+                req.file.buffer,
+                'cmc-members',
+                req.file.originalname,
+                req.file.mimetype
+            );
+            memberData.photo_url = photoUrl;
         }
 
         const updatedMember = await cmcService.updateMember(req.params.id, memberData);
+        if (!updatedMember) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
         res.json(updatedMember);
     } catch (error) {
-        if (error.message.includes('not found')) {
-            return res.status(404).json({ error: error.message });
-        }
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
-/**
- * Delete a CMC member (Admin only)
- */
 const deleteMember = async (req, res) => {
     try {
-        await cmcService.deleteMember(req.params.id);
-        res.json({ message: 'CMC member deleted successfully' });
-    } catch (error) {
-        if (error.message.includes('not found')) {
-            return res.status(404).json({ error: error.message });
+        // Delete photo from MinIO before deleting the member
+        const existingMember = await cmcService.getMemberById(req.params.id);
+        if (existingMember && existingMember.photo_url) {
+            await imageService.deleteImage(existingMember.photo_url);
         }
-        res.status(500).json({ error: error.message });
+
+        const result = await cmcService.deleteMember(req.params.id);
+        if (!result) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+        res.json({ message: 'Member deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
