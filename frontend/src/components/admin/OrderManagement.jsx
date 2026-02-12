@@ -95,7 +95,7 @@ const OrderManagement = () => {
     try {
       const updatedOrder = await updateOrderStatus(orderId, newStatus);
       setOrders(prevOrders =>
-        prevOrders.map(o => (o.id === orderId ? updatedOrder : o))
+        prevOrders.map(o => (o.id === orderId ? { ...o, status: updatedOrder.status } : o))
       );
     } catch (err) {
       console.error("Failed to update order status:", err);
@@ -128,7 +128,7 @@ const OrderManagement = () => {
       try {
         const updatedOrder = await updateOrderStatus(selectedOrderId, ORDER_STATUS.SETTLED);
         setOrders(prevOrders =>
-          prevOrders.map(o => (o.id === selectedOrderId ? updatedOrder : o))
+          prevOrders.map(o => (o.id === selectedOrderId ? { ...o, status: updatedOrder.status } : o))
         );
       } catch (err) {
         console.error("Failed to settle order:", err);
@@ -178,8 +178,12 @@ const OrderManagement = () => {
       })
       .filter(order => {
         if (!filterDate) return true;
+        const dateStr = filterDate.format('YYYY-MM-DD');
         const orderDate = new Date(order.created_at).toISOString().split('T')[0];
-        return orderDate === filterDate.format('YYYY-MM-DD');
+        const scheduledDate = order.scheduled_for_date
+          ? new Date(order.scheduled_for_date).toISOString().split('T')[0]
+          : null;
+        return orderDate === dateStr || scheduledDate === dateStr;
       });
   }, [orders, searchTerm, filterDate]);
 
@@ -228,6 +232,7 @@ const OrderManagement = () => {
                 <TableCell>Order ID</TableCell>
                 <TableCell>User</TableCell>
                 <TableCell>Order Date</TableCell>
+                <TableCell>Scheduled For</TableCell>
                 <TableCell>Total Price</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Disputed</TableCell>
@@ -254,6 +259,11 @@ const OrderManagement = () => {
                     </Box>
                   </TableCell>
                   <TableCell>{new Date(order.created_at).toLocaleString('en-GB')}</TableCell>
+                  <TableCell>
+                    {order.is_scheduled && order.scheduled_for_date
+                      ? new Date(order.scheduled_for_date).toLocaleDateString('en-GB')
+                      : new Date(order.created_at).toLocaleDateString('en-GB')}
+                  </TableCell>
                   <TableCell>₹{parseFloat(order.total_price).toFixed(2)}</TableCell>
                   <TableCell>
                     <Select

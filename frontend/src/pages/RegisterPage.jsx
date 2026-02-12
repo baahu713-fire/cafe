@@ -61,8 +61,23 @@ const RegisterPage = () => {
     event.preventDefault();
     setError('');
 
+    if (!name.trim()) {
+      setError('Name is required.');
+      return;
+    }
+
     if (username.length < 5 || username.length > 20) {
       setError('Username must be between 5 and 20 characters long.');
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError('Username can only contain letters, numbers, and underscores.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
       return;
     }
 
@@ -87,10 +102,6 @@ const RegisterPage = () => {
     }
 
     try {
-      // Step 1: Validate the CAPTCHA
-      await api.post('/validate-captcha', { captchaInput }, { withCredentials: true });
-
-      // Step 2: If CAPTCHA is valid, proceed with registration
       const formData = new FormData();
       formData.append('name', name);
       formData.append('username', username);
@@ -98,6 +109,7 @@ const RegisterPage = () => {
       formData.append('team_id', teamId);
       formData.append('photo', photo);
       formData.append('registrationKey', registrationKey);
+      formData.append('captchaInput', captchaInput);
 
       await signup(formData);
       navigate('/');
@@ -108,6 +120,7 @@ const RegisterPage = () => {
         setError(err.message || 'An unexpected error occurred during registration.');
       }
       fetchCaptcha();
+      setCaptchaInput('');
     }
   };
 

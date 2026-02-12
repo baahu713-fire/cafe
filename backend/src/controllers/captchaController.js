@@ -5,7 +5,9 @@ const captchaService = require('../services/captchaService');
  */
 async function getCaptcha(req, res) {
   try {
-    const { svg } = await captchaService.generateCaptcha(req.session.id);
+    const { svg, text } = await captchaService.generateCaptcha(req.session.id);
+    // Store in session — this modifies the session, ensuring the cookie is set
+    req.session.captchaText = text;
     res.type('svg');
     res.status(200).send(svg);
   } catch (error) {

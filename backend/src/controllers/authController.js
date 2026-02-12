@@ -1,13 +1,27 @@
 const authService = require('../services/authService');
 const userService = require('../services/userService');
+const imageService = require('../services/imageService');
 
 const register = async (req, res) => {
   try {
-    if (!req.session.captchaVerified) {
-      return res.status(403).json({ message: 'Please complete the CAPTCHA verification before registering.' });
+    const { name, username, password, team_id, registrationKey, captchaInput } = req.body;
+
+    // --- Input validation ---
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ message: 'Name is required.' });
     }
 
-    const { name, username, password, role, team_id, registrationKey } = req.body;
+    if (!username || username.length < 5 || username.length > 20) {
+      return res.status(400).json({ message: 'Username must be between 5 and 20 characters.' });
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ message: 'Username can only contain letters, numbers, and underscores.' });
+    }
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+    }
 
     if (!registrationKey) {
       return res.status(400).json({ message: 'A valid registration key is required.' });
@@ -17,22 +31,35 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'A profile photo is required.' });
     }
 
-    const photoBuffer = req.file.buffer;
-    const clientIp = req.ip; // Get client IP
+    // --- Inline CAPTCHA validation ---
+    if (!captchaInput) {
+      return res.status(400).json({ message: 'Please enter the CAPTCHA text.' });
+    }
+
+    const storedCaptcha = req.session.captchaText;
+    if (!storedCaptcha || storedCaptcha.toLowerCase() !== captchaInput.toLowerCase()) {
+      return res.status(400).json({ message: 'Invalid CAPTCHA. Please try again.' });
+    }
+    // Clear after use to prevent replay
+    req.session.captchaText = null;
+
+    // --- Upload photo to MinIO ---
+    const photo_url = await imageService.uploadImage(req.file.buffer, 'users', req.file.mimetype);
+
+    const clientIp = req.ip;
 
     // 1. Register the user (DB transaction in the service)
-    const { user } = await authService.registerUser({ name, username, password, role, team_id, photoBuffer, registrationKey });
+    const { user } = await authService.registerUser({ name, username, password, team_id, photo_url, registrationKey });
 
     // 2. Begin the user session (DB transaction in the service)
     await authService.beginUserSession({
       userId: user.id,
-      userRole: user.role, // Pass user role
+      userRole: user.role,
       sessionId: req.session.id,
-      clientIp: clientIp, // Pass client IP
+      clientIp: clientIp,
     });
 
-    // 3. Set session data and clear captcha flag
-    req.session.captchaVerified = false;
+    // 3. Set session data
     req.session.user = user;
 
     res.status(201).json({ user });

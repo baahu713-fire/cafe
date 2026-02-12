@@ -25,7 +25,7 @@ async function generateCaptcha(sessionId) {
   // Store the CAPTCHA text in Redis, expiring after 2 minutes
   await redisClient.set(`captcha:${sessionId}`, captcha.text, { EX: 120 });
 
-  return { svg: captcha.data };
+  return { svg: captcha.data, text: captcha.text };
 }
 
 /**

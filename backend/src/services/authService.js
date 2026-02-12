@@ -2,7 +2,7 @@ const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 
 const registerUser = async (userData) => {
-  const { name, username, password, role, team_id, photoBuffer, registrationKey } = userData;
+  const { name, username, password, team_id, photo_url, registrationKey } = userData;
 
   const client = await db.pool.connect();
 
@@ -32,8 +32,8 @@ const registerUser = async (userData) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userResult = await client.query(
-      'INSERT INTO users (name, username, hashed_password, team_id, photo) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, team_id, is_active, photo_url',
-      [name, username, hashedPassword, team_id, photoBuffer]
+      'INSERT INTO users (name, username, hashed_password, team_id, photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, username, role, team_id, is_active, photo_url',
+      [name, username, hashedPassword, team_id, photo_url]
     );
 
     const user = userResult.rows[0];
@@ -45,9 +45,7 @@ const registerUser = async (userData) => {
 
     await client.query('COMMIT');
 
-    // Return the user object without the password
-    const { hashed_password, ...userWithoutPassword } = user;
-    return { user: userWithoutPassword };
+    return { user };
 
   } catch (error) {
     await client.query('ROLLBACK');
