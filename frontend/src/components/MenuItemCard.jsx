@@ -215,7 +215,7 @@ const MenuItemCard = ({ item, timeSlotInfo, currentDay }) => {
                 <CardMedia
                     component="img"
                     height="140"
-                    image={item.image || 'https://via.placeholder.com/150'}
+                    image={item.image || '/storage/placeholder/food-placeholder.png'}
                     alt={item.name}
                     loading="lazy"
                 />
